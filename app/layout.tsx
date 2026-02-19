@@ -1,7 +1,8 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'BAR-LOGIC',
   description: 'Bar Management System',
 };
