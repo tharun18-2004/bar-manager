@@ -1,0 +1,21 @@
+
+> bar-manager@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.3
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+.next/types/app/layout.ts:2:24
+Type error: File 'c:/Users/91886/Documents/bar-manager/app/layout.tsx' is not a module.
+
+[0m [90m 1 |[39m [90m// File: c:\Users\91886\Documents\bar-manager\app\layout.tsx[39m[0m
+[0m[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m [33m*[39m [36mas[39m entry [36mfrom[39m [32m'../../../app/layout.js'[39m[0m
+[0m [90m   |[39m                        [31m[1m^[22m[39m[0m
+[0m [90m 3 |[39m [36mimport[39m type { [33mResolvingMetadata[39m[33m,[39m [33mResolvingViewport[39m } [36mfrom[39m [32m'next/dist/lib/metadata/types/metadata-interface.js'[39m[0m
+[0m [90m 4 |[39m[0m
+[0m [90m 5 |[39m type [33mTEntry[39m [33m=[39m [36mtypeof[39m [36mimport[39m([32m'../../../app/layout.js'[39m)[0m
