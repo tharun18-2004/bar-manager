@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import StatCard from '@/components/StatCard';
 import PageHeader from '@/components/PageHeader';
@@ -22,7 +23,7 @@ export default function OwnerPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [insights, setInsights] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'sales'>('dashboard');
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -61,7 +62,7 @@ export default function OwnerPage() {
         <PageHeader title="OWNER DASHBOARD" role={role} />
 
         <div className="bg-zinc-900 border-b border-zinc-800 flex gap-6 px-6">
-          {(['dashboard', 'sales', 'audit'] as const).map((tab) => (
+          {(['dashboard', 'sales'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -73,9 +74,14 @@ export default function OwnerPage() {
             >
               {tab === 'dashboard' && 'Dashboard'}
               {tab === 'sales' && 'Sales'}
-              {tab === 'audit' && 'Audit Log'}
             </button>
           ))}
+          <Link
+            href="/owner/audit"
+            className="ml-auto px-4 py-4 font-semibold uppercase text-sm transition border-b-2 border-transparent text-zinc-400 hover:text-white"
+          >
+            Audit Log
+          </Link>
         </div>
 
         <div className="flex-1 p-6 overflow-y-auto">
@@ -162,34 +168,6 @@ export default function OwnerPage() {
             </div>
           )}
 
-          {activeTab === 'audit' && (
-            <div>
-              <h2 className="text-2xl font-bold mb-6">Audit Log</h2>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-                <div className="space-y-4">
-                  {sales
-                    .filter((s) => s.is_voided)
-                    .map((sale) => (
-                      <div
-                        key={sale.id}
-                        className="border-l-4 border-red-500 pl-4 py-2 bg-red-900 bg-opacity-20 rounded px-4"
-                      >
-                        <p className="font-bold text-red-400">VOIDED TRANSACTION</p>
-                        <p className="text-zinc-300 text-sm">
-                          Staff: <span className="font-semibold">{sale.staff_name}</span> | Item:{' '}
-                          <span className="font-semibold">{sale.item_name}</span> | Amount:{' '}
-                          <span className="font-semibold text-red-400">${sale.amount.toFixed(2)}</span>
-                        </p>
-                        <p className="text-zinc-500 text-xs">Time: {new Date(sale.created_at).toLocaleString()}</p>
-                      </div>
-                    ))}
-                  {sales.filter((s) => s.is_voided).length === 0 && (
-                    <p className="text-zinc-500 text-center py-8">No voided transactions</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

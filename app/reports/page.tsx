@@ -6,6 +6,12 @@ import StatCard from '@/components/StatCard';
 import PageHeader from '@/components/PageHeader';
 import { authFetch } from '@/lib/auth-fetch';
 import { useRouteGuard } from '@/lib/route-guard';
+import {
+  getPdfButtonLabel,
+  getPdfFilename,
+  getPdfPeriodLabel,
+  isPdfExportDisabled,
+} from '@/lib/report-pdf-controls';
 
 interface SalesData {
   total_revenue: number;
@@ -19,9 +25,38 @@ export default function ReportsPage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['manager', 'owner']);
   const [salesData, setSalesData] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('week');
 
+  const handleDownloadPdf = async () => {
+    if (!salesData || exporting) return;
+
+    setErrorMessage(null);
+    setExporting(true);
+
+    try {
+      const { generatePDF, downloadPDF } = await import('@/lib/pdf');
+      const doc = generatePDF({
+        totalRevenue: salesData.total_revenue,
+        totalTransactions: salesData.total_transactions,
+        topItems: salesData.top_items,
+        dateRange: getPdfPeriodLabel(dateRange),
+      });
+
+      downloadPDF(doc, getPdfFilename(dateRange));
+    } catch (error) {
+      console.error('Failed to export PDF report:', error);
+      setErrorMessage('Failed to generate PDF. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const fetchReportData = useCallback(async () => {
+    setErrorMessage(null);
+    setLoading(true);
+
     try {
       const res = await authFetch(`/api/sales?range=${dateRange}`);
       const data = await res.json();
@@ -53,9 +88,12 @@ export default function ReportsPage() {
           avg_transaction: nonVoided.length > 0 ? totalRevenue / nonVoided.length : 0,
           top_items: topItems,
         });
+      } else {
+        setSalesData(null);
       }
     } catch (error) {
       console.error('Failed to fetch reports:', error);
+      setErrorMessage('Failed to load reports. Please refresh and try again.');
     } finally {
       setLoading(false);
     }
@@ -94,7 +132,24 @@ export default function ReportsPage() {
                 {range === 'month' && 'This Month'}
               </button>
             ))}
+            <button
+              onClick={() => void handleDownloadPdf()}
+              disabled={isPdfExportDisabled({
+                loading,
+                exporting,
+                hasSalesData: Boolean(salesData),
+              })}
+              className="ml-auto px-6 py-2 rounded-lg font-bold uppercase text-sm transition bg-green-600 text-white hover:bg-green-500 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed"
+            >
+              {getPdfButtonLabel(exporting)}
+            </button>
           </div>
+
+          {errorMessage && (
+            <div className="mb-6 rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+              {errorMessage}
+            </div>
+          )}
 
           {loading ? (
             <p className="text-zinc-500">Loading reports...</p>

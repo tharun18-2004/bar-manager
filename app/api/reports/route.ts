@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data, insights });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
+

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, serverError } from '@/lib/api-response';
+import { writeAuditEvent } from '@/lib/audit-log';
 
 const ALLOWED_ROLES = new Set(['bartender', 'waiter', 'manager']);
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -87,6 +88,14 @@ export async function PUT(req: NextRequest) {
       return badRequest('at least one field is required to update');
     }
 
+    const { data: existingRows, error: existingError } = await supabase
+      .from('staff')
+      .select('id, name, email, role')
+      .eq('id', parsedId)
+      .limit(1);
+    if (existingError) throw existingError;
+    const beforeRecord = existingRows?.[0] ?? null;
+
     const { data, error } = await supabase
       .from('staff')
       .update(updateData)
@@ -95,9 +104,25 @@ export async function PUT(req: NextRequest) {
 
     if (error) throw error;
 
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'staff.update',
+      resource: 'staff',
+      resourceId: parsedId,
+      outcome: 'success',
+      before: beforeRecord,
+      after: data?.[0] ?? null,
+      metadata: {
+        updatedFields: Object.keys(updateData),
+      },
+    });
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -113,6 +138,14 @@ export async function DELETE(req: NextRequest) {
       return badRequest('id must be a positive integer');
     }
 
+    const { data: existingRows, error: existingError } = await supabase
+      .from('staff')
+      .select('id, name, email, role')
+      .eq('id', id)
+      .limit(1);
+    if (existingError) throw existingError;
+    const beforeRecord = existingRows?.[0] ?? null;
+
     const { error } = await supabase
       .from('staff')
       .delete()
@@ -120,8 +153,22 @@ export async function DELETE(req: NextRequest) {
 
     if (error) throw error;
 
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'staff.delete',
+      resource: 'staff',
+      resourceId: id,
+      outcome: 'success',
+      before: beforeRecord,
+      after: null,
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
+

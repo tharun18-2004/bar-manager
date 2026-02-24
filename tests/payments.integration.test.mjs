@@ -17,6 +17,7 @@ const mockState = {
   failInsertWithMissingColumnOnce: false,
   failInsertAlreadyUsed: false,
   queryLog: [],
+  auditInserts: [],
 };
 
 function resetMockState() {
@@ -26,6 +27,7 @@ function resetMockState() {
   mockState.failInsertWithMissingColumnOnce = false;
   mockState.failInsertAlreadyUsed = false;
   mockState.queryLog = [];
+  mockState.auditInserts = [];
 }
 
 function extractEqValue(rawValue) {
@@ -52,13 +54,15 @@ function startMockSupabaseServer() {
     mockServer = http.createServer(async (req, res) => {
       const reqUrl = new URL(req.url, 'http://127.0.0.1');
 
-      if (reqUrl.pathname !== '/rest/v1/payment_transactions') {
-        res.writeHead(404);
-        res.end();
+      if (reqUrl.pathname === '/rest/v1/audit_logs' && req.method === 'POST') {
+        const body = await readJson(req);
+        const rows = Array.isArray(body) ? body : [body];
+        mockState.auditInserts.push(...rows);
+        json(res, 201, []);
         return;
       }
 
-      if (req.method === 'POST') {
+      if (reqUrl.pathname === '/rest/v1/payment_transactions' && req.method === 'POST') {
         const body = await readJson(req);
         const payload = Array.isArray(body) ? body[0] : body;
 
@@ -78,7 +82,7 @@ function startMockSupabaseServer() {
         return;
       }
 
-      if (req.method === 'GET') {
+      if (reqUrl.pathname === '/rest/v1/payment_transactions' && req.method === 'GET') {
         const orderId = extractEqValue(reqUrl.searchParams.get('order_id'));
         const externalOrderId = extractEqValue(reqUrl.searchParams.get('external_order_id'));
         const stripeId = extractEqValue(reqUrl.searchParams.get('stripe_id'));
@@ -104,7 +108,7 @@ function startMockSupabaseServer() {
         return;
       }
 
-      res.writeHead(405);
+      res.writeHead(404);
       res.end();
     });
 
@@ -120,6 +124,7 @@ test.before(async () => {
   await startMockSupabaseServer();
   nextServerProcess = await startNextDevServer(NEXT_PORT, {
     AUTH_TEST_MODE: '1',
+    AUDIT_LOG_TO_DB: '1',
     NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${mockServerPort}`,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
   });
@@ -157,6 +162,10 @@ test('POST /api/payments stores UUID in order_id', async () => {
   assert.equal(mockState.inserts.length, 1);
   assert.equal(mockState.inserts[0].order_id, uuidOrderId);
   assert.equal(mockState.inserts[0].external_order_id, null);
+  assert.equal(mockState.auditInserts.length, 1);
+  assert.equal(mockState.auditInserts[0].action, 'payment.create');
+  assert.equal(mockState.auditInserts[0].resource, 'payment_transactions');
+  assert.equal(mockState.auditInserts[0].resource_id, payload.transactionId);
 });
 
 test('POST /api/payments stores non-UUID in external_order_id', async () => {
@@ -223,4 +232,26 @@ test('POST /api/payments falls back when external_order_id column is missing', a
   assert.equal(mockState.inserts.length, 1);
   assert.equal(Object.hasOwn(mockState.inserts[0], 'external_order_id'), false);
   assert.equal(mockState.inserts[0].order_id, null);
+  assert.equal(mockState.auditInserts.length, 1);
+});
+
+test('POST /api/payments validation failure does not write audit event', async () => {
+  const response = await fetch(`${BASE_URL}/api/payments`, {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer test-owner',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      orderId: 'ORDER-INVALID',
+      amount: 0,
+      items: [{ name: 'Water', qty: 1 }],
+    }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'amount must be a positive number');
+  assert.equal(mockState.auditInserts.length, 0);
 });

@@ -7,6 +7,7 @@ import VoidModal from '@/components/VoidModal';
 import PageHeader from '@/components/PageHeader';
 import AppToast from '@/components/AppToast';
 import { authFetch } from '@/lib/auth-fetch';
+import { addItemToOrder } from '@/lib/employee-order';
 import { formatError } from '@/lib/errors';
 import { useRouteGuard } from '@/lib/route-guard';
 
@@ -44,11 +45,11 @@ export default function EmployeePage() {
         const { data } = await res.json();
         if (data) {
           const formattedMenuItems = data.map((item: any) => ({
-            id: item.id,
+            id: String(item.id),
             name: item.item_name,
-            price: item.unit_price,
+            price: Number(item.unit_price),
             category: item.category,
-            quantity: item.quantity,
+            quantity: Number(item.quantity),
           }));
           setMenuItems(formattedMenuItems);
         }
@@ -66,19 +67,18 @@ export default function EmployeePage() {
 
   if (!isAuthorized) return null;
 
-  const filteredItems = menuItems.filter(item =>
+  const filteredItems = menuItems.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const addToOrder = (item: MenuItem) => {
-    const existingItem = orderItems.find(oi => oi.id === item.id);
-    if (existingItem) {
-      setOrderItems(orderItems.map(oi =>
-        oi.id === item.id ? { ...oi, quantity: oi.quantity + 1 } : oi
-      ));
-    } else {
-      setOrderItems([...orderItems, { ...item, quantity: 1 }]);
-    }
+    setOrderItems((prev) => {
+      const { nextItems, message } = addItemToOrder(prev, item);
+      if (message) {
+        setToast({ type: 'info', message });
+      }
+      return nextItems;
+    });
   };
 
   const removeFromOrder = (id: string) => {
@@ -183,17 +183,26 @@ export default function EmployeePage() {
             </div>
 
             <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-4 pr-4">
-              {filteredItems.map(item => (
+              {filteredItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => addToOrder(item)}
-                  className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 p-4 rounded-lg text-left transition group"
+                  disabled={item.quantity <= 0}
+                  className="bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-900 border border-zinc-700 p-4 rounded-lg text-left transition group disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <p className="font-bold text-lg group-hover:text-blue-400">{item.name}</p>
                   <p className="text-zinc-500 text-sm">{item.category}</p>
                   <p className="text-green-400 font-bold mt-2">${item.price.toFixed(2)}</p>
+                  <p className={`text-xs mt-1 ${item.quantity <= 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                    {item.quantity <= 0 ? 'Out of stock' : `${item.quantity} in stock`}
+                  </p>
                 </button>
               ))}
+              {!loading && filteredItems.length === 0 && (
+                <p className="col-span-2 text-zinc-500 text-center py-8">
+                  {searchQuery ? 'No menu items match your search.' : 'No menu items available.'}
+                </p>
+              )}
             </div>
           </div>
 

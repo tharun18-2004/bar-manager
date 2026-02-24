@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, serverError } from '@/lib/api-response';
+import { writeAuditEvent } from '@/lib/audit-log';
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,9 +46,25 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'void.create',
+      resource: 'sales',
+      resourceId: parsedSaleId,
+      outcome: 'success',
+      metadata: {
+        reason: void_reason.trim(),
+        voidedAmount: parsedVoidedAmount,
+      },
+      after: data?.[0] ?? null,
+    });
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -69,6 +86,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
+

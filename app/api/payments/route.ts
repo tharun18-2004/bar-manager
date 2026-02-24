@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { supabase } from '@/lib/supabase';
 import { badRequest, serverError } from '@/lib/api-response';
+import { writeAuditEvent } from '@/lib/audit-log';
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -97,13 +98,35 @@ export async function POST(req: NextRequest) {
       if (fallbackInsert.error) throw fallbackInsert.error;
     }
 
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'payment.create',
+      resource: 'payment_transactions',
+      resourceId: transactionId,
+      outcome: 'success',
+      metadata: {
+        orderId: normalizedOrderId,
+        amount: parsedAmount,
+        itemsCount: items.length,
+      },
+      after: {
+        orderId: normalizedOrderId,
+        amount: parsedAmount,
+        staffName: resolvedStaff,
+        transactionId,
+      },
+    });
+
     return NextResponse.json({ 
       success: true, 
       message: 'Free transaction completed',
       transactionId,
     });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -182,6 +205,7 @@ export async function GET(req: NextRequest) {
       data,
     });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
+

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -120,7 +120,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
 
@@ -145,6 +145,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Customer deleted successfully' });
   } catch (error) {
-    return serverError(error);
+    return serverError(error, req);
   }
 }
+

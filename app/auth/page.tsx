@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { signIn, signUp } from '@/lib/auth';
+import { getCurrentUser, signIn, signUp } from '@/lib/auth';
 import { Suspense } from 'react';
 
 function resolveNextPath(nextValue: string | null): string {
@@ -11,6 +11,17 @@ function resolveNextPath(nextValue: string | null): string {
   if (!nextValue.startsWith('/')) return '/employee';
   if (nextValue.startsWith('//')) return '/employee';
   return nextValue;
+}
+
+type LoginMode = 'staff' | 'owner';
+
+function resolveRole(rawRole: unknown): 'staff' | 'manager' | 'owner' {
+  if (rawRole === 'owner' || rawRole === 'manager') return rawRole;
+  return 'staff';
+}
+
+function defaultPathForRole(role: 'staff' | 'manager' | 'owner') {
+  return role === 'owner' ? '/owner' : '/employee';
 }
 
 function AuthPageContent() {
@@ -23,6 +34,7 @@ function AuthPageContent() {
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loginMode, setLoginMode] = useState<LoginMode>('staff');
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +46,30 @@ function AuthPageContent() {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        const nextPath = resolveNextPath(searchParams.get('next'));
+
+        const user = await getCurrentUser();
+        const appRole = resolveRole(user?.app_metadata?.role);
+        const profileRole = resolveRole(user?.user_metadata?.role);
+        const effectiveRole = appRole === 'owner' || profileRole === 'owner' ? 'owner' : appRole;
+
+        const requestedNext = searchParams.get('next');
+        const selectedPath = loginMode === 'owner' ? '/owner' : '/employee';
+        const nextPath = requestedNext
+          ? resolveNextPath(requestedNext)
+          : selectedPath === defaultPathForRole(effectiveRole)
+            ? selectedPath
+            : defaultPathForRole(effectiveRole);
+
+        if (loginMode === 'owner' && effectiveRole !== 'owner') {
+          router.push(defaultPathForRole(effectiveRole));
+          return;
+        }
+
+        if (loginMode === 'staff' && effectiveRole === 'owner') {
+          router.push('/owner');
+          return;
+        }
+
         router.push(nextPath);
       } else {
         const { error } = await signUp(email, password, fullName);
@@ -59,6 +94,38 @@ function AuthPageContent() {
       <div className="w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <h2 className="text-3xl font-bold mb-8">{isLogin ? 'Sign In' : 'Create Account'}</h2>
+
+          {isLogin && (
+            <div className="mb-6">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setLoginMode('staff')}
+                  className={`py-2 rounded-lg font-bold transition ${
+                    loginMode === 'staff'
+                      ? 'bg-white text-black'
+                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  Staff Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginMode('owner')}
+                  className={`py-2 rounded-lg font-bold transition ${
+                    loginMode === 'owner'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  }`}
+                >
+                  Owner Login
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-zinc-500">
+                You will be redirected to your allowed dashboard based on account role.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleAuth} className="space-y-4">
             {!isLogin && (
@@ -98,7 +165,13 @@ function AuthPageContent() {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 py-3 rounded-lg font-bold transition"
             >
-              {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
+              {loading
+                ? 'Processing...'
+                : isLogin
+                  ? loginMode === 'owner'
+                    ? 'Sign In as Owner'
+                    : 'Sign In as Staff'
+                  : 'Create Account'}
             </button>
           </form>
 

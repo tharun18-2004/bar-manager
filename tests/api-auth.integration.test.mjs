@@ -412,3 +412,25 @@ test('POST /api/customers with manager token validates required fields', async (
   assert.equal(payload.success, false);
   assert.equal(payload.error, 'phone is required');
 });
+
+test('GET /api/audit returns 403 for manager role token', async () => {
+  const response = await fetch(`${BASE_URL}/api/audit`, {
+    headers: { authorization: 'Bearer test-manager' },
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'Forbidden');
+});
+
+test('GET /api/audit with owner token validates date_from format', async () => {
+  const response = await fetch(`${BASE_URL}/api/audit?date_from=02-22-2026`, {
+    headers: { authorization: 'Bearer test-owner' },
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'date_from must be YYYY-MM-DD');
+});

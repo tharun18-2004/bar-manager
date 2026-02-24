@@ -25,6 +25,9 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
 
   const headers = new Headers(init.headers);
   headers.set('Authorization', `Bearer ${data.session.access_token}`);
+  if (!headers.has('x-request-id')) {
+    headers.set('x-request-id', crypto.randomUUID());
+  }
 
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');

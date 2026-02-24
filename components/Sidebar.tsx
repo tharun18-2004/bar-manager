@@ -39,6 +39,7 @@ const NAV_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
     items: [
       { href: '/reports', label: 'Reports', roles: ['manager', 'owner'] },
       { href: '/owner', label: 'Owner Dashboard', roles: ['owner'] },
+      { href: '/owner/audit', label: 'Owner Audit', roles: ['owner'] },
     ],
   },
 ];

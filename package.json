@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "npm run test:api",
     "test:api": "node --test --test-concurrency=1 tests",
-    "verify": "npm run test:api && npm run lint && npm run build"
+    "test:pdf": "npx tsc --pretty false --module commonjs --target es2020 --esModuleInterop --allowJs true --skipLibCheck --noEmit false --outDir .tmp-test-build tests/pdf.unit.test.ts tests/reports-pdf-controls.unit.test.ts tests/employee-order.unit.test.ts lib/pdf.ts lib/report-pdf-controls.ts lib/employee-order.ts && node --test .tmp-test-build/tests/pdf.unit.test.js .tmp-test-build/tests/reports-pdf-controls.unit.test.js .tmp-test-build/tests/employee-order.unit.test.js",
+    "verify": "npm run test:api && npm run test:pdf && npm run lint && npm run build"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

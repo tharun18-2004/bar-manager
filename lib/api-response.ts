@@ -1,12 +1,52 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export function badRequest(error: string) {
   return NextResponse.json({ success: false, error }, { status: 400 });
 }
 
-export function serverError(error: unknown) {
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function getErrorName(error: unknown): string {
+  if (error instanceof Error && error.name) return error.name;
+  return 'UnknownError';
+}
+
+function getErrorStack(error: unknown): string | null {
+  if (error instanceof Error && typeof error.stack === 'string') {
+    return error.stack;
+  }
+  return null;
+}
+
+export function serverError(error: unknown, req?: NextRequest) {
   const message = error instanceof Error ? error.message : String(error);
-  return NextResponse.json({ success: false, error: message }, { status: 500 });
+  const requestId = req?.headers.get('x-request-id') ?? crypto.randomUUID();
+  const route = req?.nextUrl?.pathname ?? null;
+  const method = req?.method ?? null;
+
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      type: 'api_error',
+      timestamp: new Date().toISOString(),
+      requestId,
+      route,
+      method,
+      error: {
+        name: getErrorName(error),
+        message: getErrorMessage(error),
+        stack: getErrorStack(error),
+      },
+    })
+  );
+
+  return NextResponse.json(
+    { success: false, error: message, requestId },
+    { status: 500, headers: { 'x-request-id': requestId } }
+  );
 }
 
 export type DateRange = 'today' | 'week' | 'month';

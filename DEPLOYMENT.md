@@ -41,6 +41,8 @@ Create `.env.local` locally and add to deployment platform:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 GEMINI_API_KEY=your-gemini-key
+NEXT_PUBLIC_APP_VERSION=2.0.0
+AUDIT_LOG_TO_DB=1
 ```
 
 ## Database Setup (Supabase)
@@ -102,6 +104,23 @@ CREATE TABLE payment_transactions (
 
 CREATE INDEX idx_payment_transactions_external_order_id
   ON payment_transactions(external_order_id);
+
+-- Optional but recommended for production audit features
+CREATE TABLE audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  request_id TEXT,
+  actor_id TEXT,
+  actor_email TEXT,
+  actor_role TEXT,
+  action TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  resource_id TEXT,
+  outcome TEXT NOT NULL DEFAULT 'success',
+  metadata JSONB,
+  before_state JSONB,
+  after_state JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ## Migration Order (Required)
@@ -124,6 +143,8 @@ See `db/migrations/README.md` for verification queries and role assignment SQL.
 - [ ] Verify API routes respond
 - [ ] Test inventory management
 - [ ] Confirm reports display correctly
+- [ ] Verify `GET /api/audit` works for owner role
+- [ ] Verify owner audit filters and `Next`/`Previous` pagination
 
 ## Pre-Deploy Verification (Local)
 
@@ -132,3 +153,8 @@ Run the full verification gate before each production deployment:
 ```bash
 npm run verify
 ```
+
+## Rollback / Degraded Mode
+
+- If `audit_logs` table is missing or not yet migrated, `/api/audit` returns `success: true`, empty `data`, and a warning.
+- This keeps owner UI functional while audit persistence is temporarily unavailable.

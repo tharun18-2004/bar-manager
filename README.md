@@ -101,6 +101,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
 # Gemini AI (server-side only)
 GEMINI_API_KEY=your-gemini-key
+
+# Optional app metadata surfaced in /api/health
+NEXT_PUBLIC_APP_VERSION=2.0.0
+
+# Enable persistent audit writes to audit_logs table
+AUDIT_LOG_TO_DB=1
 ```
 
 ## 🗄️ Database Schema
@@ -182,6 +188,23 @@ CREATE TABLE payment_transactions (
   status VARCHAR(50),
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Unified audit trail
+CREATE TABLE audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  request_id TEXT,
+  actor_id TEXT,
+  actor_email TEXT,
+  actor_role TEXT,
+  action TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  resource_id TEXT,
+  outcome TEXT NOT NULL DEFAULT 'success',
+  metadata JSONB,
+  before_state JSONB,
+  after_state JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ### Migration Order
@@ -244,6 +267,14 @@ npm start
 ```bash
 npm run verify
 ```
+
+Release checks before production deploy:
+- `npm run verify` passes
+- `GET /api/audit` with owner token returns data plus page metadata
+- Owner audit tab `Next`/`Previous` works with 50+ records
+
+Rollback/degraded mode note:
+- If `audit_logs` table is missing, `/api/audit` returns success with empty `data` and a warning so owner UI stays usable.
 
 ### Linting
 ```bash
@@ -315,6 +346,20 @@ railway up
 
 ### Reports API
 - `GET /api/reports?range=today|week|month` - Sales report + AI insights (`manager/owner`)
+
+### Audit API
+- `GET /api/audit` - Owner audit stream (`owner`)
+- Filters:
+  - `actor` (contains match on actor email)
+  - `action` (exact action)
+  - `date_from=YYYY-MM-DD`
+  - `date_to=YYYY-MM-DD`
+- Pagination:
+  - `limit` (1-200, default 50)
+  - `cursor` (opaque next cursor from previous response)
+- Examples:
+  - `GET /api/audit?action=staff.update&limit=50`
+  - `GET /api/audit?limit=50&cursor=<nextCursor>`
 
 ### Health API
 - `GET /api/health` - Deployment/readiness check (no auth required)

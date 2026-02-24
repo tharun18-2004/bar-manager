@@ -25,4 +25,10 @@ test('GET /api/health returns 200 with ready env checks', async () => {
   assert.equal(payload.checks?.env, 'pass');
   assert.equal(typeof payload.timestamp, 'string');
   assert.ok(payload.timestamp.length > 0);
+  assert.equal(typeof payload.meta?.version, 'string');
+  assert.ok(payload.meta.version.length > 0);
+  assert.equal(payload.meta?.runtime, 'nodejs');
+  assert.equal(typeof payload.meta?.nodeEnv, 'string');
+  assert.equal(typeof payload.meta?.uptimeSec, 'number');
+  assert.ok(payload.meta.uptimeSec >= 0);
 });
