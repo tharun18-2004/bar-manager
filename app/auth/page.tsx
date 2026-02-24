@@ -85,15 +85,18 @@ function AuthPageContent() {
   };
 
   return (
-    <div className="flex h-screen bg-black text-white">
-      <div className="w-1/2 bg-gradient-to-br from-blue-600 to-blue-900 flex flex-col items-center justify-center p-8">
-        <h1 className="text-5xl font-black text-white mb-4">BAR-LOGIC</h1>
-        <p className="text-xl text-blue-100 text-center">Professional Bar Management System</p>
+    <div className="min-h-screen bg-slate-950 text-white grid grid-cols-1 lg:grid-cols-2">
+      <div className="hidden lg:flex bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 flex-col items-center justify-center p-10">
+        <h1 className="text-6xl font-black text-slate-950 mb-4 tracking-tight">BAR-LOGIC</h1>
+        <p className="text-2xl text-amber-100 text-center max-w-md">Professional Bar Management System</p>
+        <div className="mt-10 rounded-2xl bg-black/20 border border-black/20 px-6 py-4 text-amber-50 text-sm">
+          Built for staff speed, owner visibility, and operational control.
+        </div>
       </div>
 
-      <div className="w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <h2 className="text-3xl font-bold mb-8">{isLogin ? 'Sign In' : 'Create Account'}</h2>
+      <div className="flex items-center justify-center p-6 lg:p-10">
+        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8 shadow-2xl">
+          <h2 className="text-3xl font-black mb-8 text-amber-400">{isLogin ? 'Sign In' : 'Create Account'}</h2>
 
           {isLogin && (
             <div className="mb-6">
@@ -101,10 +104,10 @@ function AuthPageContent() {
                 <button
                   type="button"
                   onClick={() => setLoginMode('staff')}
-                  className={`py-2 rounded-lg font-bold transition ${
+                    className={`py-2 rounded-lg font-bold transition ${
                     loginMode === 'staff'
-                      ? 'bg-white text-black'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      ? 'bg-amber-400 text-slate-900'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
                   Staff Login
@@ -112,16 +115,16 @@ function AuthPageContent() {
                 <button
                   type="button"
                   onClick={() => setLoginMode('owner')}
-                  className={`py-2 rounded-lg font-bold transition ${
+                    className={`py-2 rounded-lg font-bold transition ${
                     loginMode === 'owner'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      ? 'bg-amber-500 text-slate-950'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
                   Owner Login
                 </button>
               </div>
-              <p className="mt-3 text-xs text-zinc-500">
+              <p className="mt-3 text-xs text-slate-400">
                 You will be redirected to your allowed dashboard based on account role.
               </p>
             </div>
@@ -134,7 +137,7 @@ function AuthPageContent() {
                 placeholder="Full Name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
                 required={!isLogin}
               />
             )}
@@ -144,7 +147,7 @@ function AuthPageContent() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
               required
             />
 
@@ -153,17 +156,17 @@ function AuthPageContent() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
               required
             />
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            {success && <p className="text-green-500 text-sm">{success}</p>}
+            {error && <p className="text-rose-400 text-sm">{error}</p>}
+            {success && <p className="text-emerald-400 text-sm">{success}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 py-3 rounded-lg font-bold transition"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:bg-slate-700 disabled:text-slate-300 py-3 rounded-lg font-bold transition"
             >
               {loading
                 ? 'Processing...'
@@ -176,20 +179,20 @@ function AuthPageContent() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-zinc-400">
+            <p className="text-slate-300">
               {isLogin ? "Don't have an account? " : 'Already have an account? '}
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-blue-400 hover:text-blue-300 font-bold transition"
+                className="text-amber-300 hover:text-amber-200 font-bold transition"
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
             </p>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-zinc-700">
-            <p className="text-zinc-500 text-sm text-center mb-4">Demo Credentials</p>
-            <div className="space-y-2 text-xs text-zinc-600">
+          <div className="mt-8 pt-8 border-t border-slate-700">
+            <p className="text-slate-400 text-sm text-center mb-4">Demo Credentials</p>
+            <div className="space-y-2 text-xs text-slate-500">
               <p>Email: demo@bar.com</p>
               <p>Password: Demo@123</p>
             </div>
