@@ -20,7 +20,7 @@ export default function VoidModal({ isOpen, onClose, onConfirm, loading = false 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-slate-900 border border-rose-900/50 w-full max-w-md p-8 rounded-2xl shadow-2xl">
         <h2 className="text-2xl font-bold text-rose-400 mb-2">Confirm Void</h2>
         <p className="text-slate-300 mb-6 text-sm">

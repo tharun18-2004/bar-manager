@@ -89,7 +89,7 @@ function AuthPageContent() {
       <div className="flex bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 flex-col items-center justify-center p-8 lg:p-10 min-h-56 lg:min-h-screen">
         <h1 className="text-5xl lg:text-6xl font-black text-slate-950 mb-3 tracking-tight">BAR-LOGIC</h1>
         <p className="text-lg lg:text-2xl text-amber-100 text-center max-w-md">Professional Bar Management System</p>
-        <div className="mt-6 lg:mt-10 rounded-2xl bg-black/20 border border-black/20 px-6 py-4 text-amber-50 text-sm">
+        <div className="mt-6 lg:mt-10 rounded-2xl bg-slate-950/20 border border-black/20 px-6 py-4 text-amber-50 text-sm">
           Built for staff speed, owner visibility, and operational control.
         </div>
       </div>
@@ -205,7 +205,7 @@ function AuthPageContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading...</div>}>
       <AuthPageContent />
     </Suspense>
   );

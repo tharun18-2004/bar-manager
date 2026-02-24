@@ -39,7 +39,7 @@ export default function StaffPage() {
   }, [isAuthorized]);
 
   if (isChecking) {
-    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Checking access...</div>;
+    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Checking access...</div>;
   }
 
   if (!isAuthorized) return null;
@@ -96,7 +96,7 @@ export default function StaffPage() {
   };
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-slate-950 text-white">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
       
@@ -109,7 +109,7 @@ export default function StaffPage() {
           </div>
 
           {showAddForm && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 mb-6">
               <h2 className="text-xl font-bold mb-4">Add New Staff Member</h2>
               <form onSubmit={handleAddStaff} className="space-y-4">
                 <input
@@ -117,7 +117,7 @@ export default function StaffPage() {
                   placeholder="Full Name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                   required
                 />
                 <input
@@ -125,13 +125,13 @@ export default function StaffPage() {
                   placeholder="Email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                   required
                 />
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffRole })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                 >
                   <option value="bartender">Bartender</option>
                   <option value="waiter">Waiter</option>
@@ -140,14 +140,14 @@ export default function StaffPage() {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg transition"
                   >
                     ADD STAFF
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2 rounded-lg transition"
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition"
                   >
                     CANCEL
                   </button>
@@ -159,28 +159,28 @@ export default function StaffPage() {
           {!showAddForm && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="mb-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition"
+              className="mb-6 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-lg transition"
             >
               + ADD STAFF MEMBER
             </button>
           )}
 
           {loading ? (
-            <p className="text-zinc-500">Loading staff...</p>
+            <p className="text-slate-400">Loading staff...</p>
           ) : (
             <div className="grid gap-4">
               {staff.map(member => (
-                <div key={member.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 flex justify-between items-center">
+                <div key={member.id} className="bg-slate-900 border border-slate-800 rounded-lg p-6 flex justify-between items-center">
                   <div>
                     <h3 className="text-xl font-bold">{member.name}</h3>
-                    <p className="text-zinc-400">{member.email}</p>
+                    <p className="text-slate-300">{member.email}</p>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-2 ${roleColors[member.role]}`}>
                       {member.role.toUpperCase()}
                     </span>
                   </div>
                   <button
                     onClick={() => setDeletingStaff(member)}
-                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition"
+                    className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg transition"
                   >
                     DELETE
                   </button>

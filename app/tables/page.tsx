@@ -37,7 +37,7 @@ export default function TablesPage() {
   }, [isAuthorized]);
 
   if (isChecking) {
-    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Checking access...</div>;
+    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Checking access...</div>;
   }
 
   if (!isAuthorized) return null;
@@ -84,7 +84,7 @@ export default function TablesPage() {
 
   const statusColors = {
     available: 'bg-green-900 border-green-700 text-green-300',
-    occupied: 'bg-blue-900 border-blue-700 text-blue-300',
+    occupied: 'bg-blue-900 border-blue-700 text-amber-200',
     reserved: 'bg-yellow-900 border-yellow-700 text-yellow-300',
   };
 
@@ -99,7 +99,7 @@ export default function TablesPage() {
   const availableTables = tables.filter((t) => t.status === 'available').length;
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-slate-950 text-white">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
@@ -114,7 +114,7 @@ export default function TablesPage() {
           </div>
 
           {loading ? (
-            <p className="text-zinc-500">Loading tables...</p>
+            <p className="text-slate-400">Loading tables...</p>
           ) : (
             <div className="grid grid-cols-4 gap-4">
               {tables.map((table) => (
@@ -122,7 +122,7 @@ export default function TablesPage() {
                   key={table.id}
                   onClick={() => setSelectedTable(table)}
                   className={`p-6 rounded-lg border-2 transition hover:scale-105 ${
-                    selectedTable?.id === table.id ? 'ring-2 ring-blue-500' : ''
+                    selectedTable?.id === table.id ? 'ring-2 ring-amber-400' : ''
                   } ${statusColors[table.status]}`}
                 >
                   <div className="text-3xl font-bold mb-2">{statusBadge[table.status]}</div>
@@ -135,22 +135,22 @@ export default function TablesPage() {
           )}
 
           {selectedTable && (
-            <div className="fixed bottom-6 right-6 bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-96 shadow-2xl">
+            <div className="fixed bottom-6 right-6 bg-slate-900 border border-slate-800 rounded-lg p-6 w-96 shadow-2xl">
               <h3 className="text-xl font-bold mb-4">Table {selectedTable.table_number}</h3>
 
               <div className="space-y-2 mb-6">
                 <p>
-                  <span className="text-zinc-400">Status:</span>{' '}
+                  <span className="text-slate-300">Status:</span>{' '}
                   <span className="font-bold capitalize">{selectedTable.status}</span>
                 </p>
                 <p>
-                  <span className="text-zinc-400">Capacity:</span>{' '}
+                  <span className="text-slate-300">Capacity:</span>{' '}
                   <span className="font-bold">{selectedTable.capacity} people</span>
                 </p>
                 {selectedTable.order_amount && (
                   <p>
-                    <span className="text-zinc-400">Order Total:</span>{' '}
-                    <span className="font-bold text-green-400">${selectedTable.order_amount.toFixed(2)}</span>
+                    <span className="text-slate-300">Order Total:</span>{' '}
+                    <span className="font-bold text-emerald-300">${selectedTable.order_amount.toFixed(2)}</span>
                   </p>
                 )}
               </div>
@@ -160,13 +160,13 @@ export default function TablesPage() {
                   <>
                     <button
                       onClick={() => setReservationTarget({ tableId: selectedTable.id, status: 'occupied' })}
-                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded font-bold transition"
+                      className="w-full py-2 bg-amber-500 hover:bg-amber-400 rounded font-bold transition"
                     >
                       Mark Occupied
                     </button>
                     <button
                       onClick={() => setReservationTarget({ tableId: selectedTable.id, status: 'reserved' })}
-                      className="w-full py-2 bg-yellow-600 hover:bg-yellow-700 rounded font-bold transition"
+                      className="w-full py-2 bg-amber-500 hover:bg-amber-400 rounded font-bold transition"
                     >
                       Make Reservation
                     </button>
@@ -176,7 +176,7 @@ export default function TablesPage() {
                 {selectedTable.status !== 'available' && (
                   <button
                     onClick={() => updateTableStatus(selectedTable.id, 'available')}
-                    className="w-full py-2 bg-green-600 hover:bg-green-700 rounded font-bold transition"
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-bold transition"
                   >
                     Mark Available
                   </button>
@@ -185,7 +185,7 @@ export default function TablesPage() {
 
               <button
                 onClick={() => setSelectedTable(null)}
-                className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 rounded font-bold transition"
+                className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded font-bold transition"
               >
                 Close
               </button>

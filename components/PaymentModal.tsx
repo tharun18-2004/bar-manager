@@ -50,12 +50,12 @@ export default function PaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
-      <div className="bg-zinc-900 border border-zinc-800 w-full max-w-md p-8 rounded-3xl shadow-2xl">
-        <h2 className="text-2xl font-bold text-blue-500 mb-2">Complete Transaction</h2>
-        <p className="text-zinc-400 mb-4">
-          Total: <span className="text-green-400 text-xl font-bold">${amount.toFixed(2)}</span>
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-md p-8 rounded-3xl shadow-2xl">
+        <h2 className="text-2xl font-bold text-amber-400 mb-2">Complete Transaction</h2>
+        <p className="text-slate-300 mb-4">
+          Total: <span className="text-emerald-300 text-xl font-bold">${amount.toFixed(2)}</span>
         </p>
         <p className="text-green-500 text-sm mb-6 font-semibold">FREE TRANSACTION</p>
 
@@ -63,7 +63,7 @@ export default function PaymentModal({
           <button
             type="button"
             onClick={onCancel}
-            className="w-full py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-lg transition"
+            className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition"
             disabled={loading}
           >
             Cancel
@@ -71,7 +71,7 @@ export default function PaymentModal({
           <button
             onClick={handleFreePayment}
             disabled={loading}
-            className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-zinc-700 text-white font-bold rounded-lg transition"
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-bold rounded-lg transition"
           >
             {loading ? 'Processing...' : 'Complete Free Transaction'}
           </button>

@@ -32,7 +32,7 @@ export default function InventoryPage() {
   }, [isAuthorized]);
 
   if (isChecking) {
-    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Checking access...</div>;
+    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Checking access...</div>;
   }
 
   if (!isAuthorized) return null;
@@ -86,7 +86,7 @@ export default function InventoryPage() {
   const lowStockItems = inventory.filter(item => item.quantity < 5).length;
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-slate-950 text-white">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
       
@@ -103,7 +103,7 @@ export default function InventoryPage() {
 
           {/* Add Item Form */}
           {showAddForm && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 mb-6">
               <h2 className="text-xl font-bold mb-4">Add New Item</h2>
               <form onSubmit={handleAddItem} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -112,13 +112,13 @@ export default function InventoryPage() {
                     placeholder="Item Name"
                     value={formData.item_name}
                     onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                     required
                   />
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                   >
                     <option>Drinks</option>
                     <option>Food</option>
@@ -129,7 +129,7 @@ export default function InventoryPage() {
                     placeholder="Quantity"
                     value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                     required
                   />
                   <input
@@ -138,21 +138,21 @@ export default function InventoryPage() {
                     step="0.01"
                     value={formData.unit_price}
                     onChange={(e) => setFormData({ ...formData, unit_price: Number(e.target.value) })}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                     required
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg transition"
                   >
                     ADD ITEM
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2 rounded-lg transition"
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition"
                   >
                     CANCEL
                   </button>
@@ -164,7 +164,7 @@ export default function InventoryPage() {
           {!showAddForm && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="mb-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition"
+              className="mb-6 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-lg transition"
             >
               + ADD NEW ITEM
             </button>
@@ -172,45 +172,45 @@ export default function InventoryPage() {
 
           {/* Inventory Table */}
           {loading ? (
-            <p className="text-zinc-500">Loading inventory...</p>
+            <p className="text-slate-400">Loading inventory...</p>
           ) : (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead className="bg-zinc-800 border-b border-zinc-700">
+                <thead className="bg-slate-800 border-b border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left font-bold text-blue-500">Item</th>
-                    <th className="px-6 py-3 text-left font-bold text-blue-500">Category</th>
-                    <th className="px-6 py-3 text-center font-bold text-blue-500">Quantity</th>
-                    <th className="px-6 py-3 text-right font-bold text-blue-500">Unit Price</th>
-                    <th className="px-6 py-3 text-right font-bold text-blue-500">Total Value</th>
-                    <th className="px-6 py-3 text-center font-bold text-blue-500">Actions</th>
+                    <th className="px-6 py-3 text-left font-bold text-amber-400">Item</th>
+                    <th className="px-6 py-3 text-left font-bold text-amber-400">Category</th>
+                    <th className="px-6 py-3 text-center font-bold text-amber-400">Quantity</th>
+                    <th className="px-6 py-3 text-right font-bold text-amber-400">Unit Price</th>
+                    <th className="px-6 py-3 text-right font-bold text-amber-400">Total Value</th>
+                    <th className="px-6 py-3 text-center font-bold text-amber-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                   {inventory.map(item => (
-                    <tr key={item.id} className="hover:bg-zinc-800 transition">
+                    <tr key={item.id} className="hover:bg-slate-800 transition">
                       <td className="px-6 py-3 font-semibold">{item.item_name}</td>
-                      <td className="px-6 py-3 text-zinc-400">{item.category}</td>
+                      <td className="px-6 py-3 text-slate-300">{item.category}</td>
                       <td className="px-6 py-3 text-center">
-                        <span className={item.quantity < 5 ? 'text-red-400 font-bold' : 'text-green-400'}>
+                        <span className={item.quantity < 5 ? 'text-rose-300 font-bold' : 'text-emerald-300'}>
                           {item.quantity}
                         </span>
                       </td>
                       <td className="px-6 py-3 text-right">${item.unit_price.toFixed(2)}</td>
-                      <td className="px-6 py-3 text-right font-bold text-green-400">
+                      <td className="px-6 py-3 text-right font-bold text-emerald-300">
                         ${(item.quantity * item.unit_price).toFixed(2)}
                       </td>
                       <td className="px-6 py-3 text-center">
                         <div className="flex gap-2 justify-center">
                           <button
                             onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                            className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm font-bold"
+                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-bold"
                           >
                             +
                           </button>
                           <button
                             onClick={() => handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                            className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm font-bold"
+                            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-sm font-bold"
                           >
                             -
                           </button>

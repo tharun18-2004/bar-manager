@@ -38,7 +38,7 @@ export default function CustomersPage() {
   }, [isAuthorized]);
 
   if (isChecking) {
-    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Checking access...</div>;
+    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Checking access...</div>;
   }
 
   if (!isAuthorized) return null;
@@ -119,7 +119,7 @@ export default function CustomersPage() {
   const avgSpent = totalCustomers > 0 ? totalRevenue / totalCustomers : 0;
 
   return (
-    <div className="flex h-screen bg-black text-white">
+    <div className="flex h-screen bg-slate-950 text-white">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
@@ -139,12 +139,12 @@ export default function CustomersPage() {
               placeholder="Search by name or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
             />
           </div>
 
           {(showAddForm || editingCustomer) && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 mb-6">
               <h2 className="text-xl font-bold mb-4">{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</h2>
               <form onSubmit={editingCustomer ? handleEditCustomer : handleAddCustomer} className="space-y-4">
                 <input
@@ -152,7 +152,7 @@ export default function CustomersPage() {
                   placeholder="Customer Name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                   required
                 />
                 <input
@@ -160,7 +160,7 @@ export default function CustomersPage() {
                   placeholder="Phone Number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                   required
                 />
                 <input
@@ -168,12 +168,12 @@ export default function CustomersPage() {
                   placeholder="Email (optional)"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                 />
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg transition"
                   >
                     {editingCustomer ? 'UPDATE CUSTOMER' : 'ADD CUSTOMER'}
                   </button>
@@ -184,7 +184,7 @@ export default function CustomersPage() {
                       setEditingCustomer(null);
                       setFormData({ name: '', phone: '', email: '' });
                     }}
-                    className="flex-1 bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-2 rounded-lg transition"
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded-lg transition"
                   >
                     CANCEL
                   </button>
@@ -196,35 +196,35 @@ export default function CustomersPage() {
           {!showAddForm && !editingCustomer && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="mb-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition"
+              className="mb-6 px-6 py-3 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-lg transition"
             >
               + ADD CUSTOMER
             </button>
           )}
 
           {loading ? (
-            <p className="text-zinc-500">Loading customers...</p>
+            <p className="text-slate-400">Loading customers...</p>
           ) : (
             <div className="grid gap-4">
               {filteredCustomers.length === 0 ? (
-                <p className="text-zinc-500 text-center py-8">No customers found</p>
+                <p className="text-slate-400 text-center py-8">No customers found</p>
               ) : (
                 filteredCustomers.map((customer) => (
-                  <div key={customer.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+                  <div key={customer.id} className="bg-slate-900 border border-slate-800 rounded-lg p-6">
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="text-xl font-bold">{customer.name}</h3>
-                        <p className="text-zinc-400">Phone: {customer.phone}</p>
-                        {customer.email && <p className="text-zinc-400">Email: {customer.email}</p>}
-                        <p className="text-zinc-500 text-sm mt-2">
+                        <p className="text-slate-300">Phone: {customer.phone}</p>
+                        {customer.email && <p className="text-slate-300">Email: {customer.email}</p>}
+                        <p className="text-slate-400 text-sm mt-2">
                           Member since {new Date(customer.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="text-right flex gap-2">
-                        <p className="text-2xl font-bold text-green-400">${customer.total_spent.toFixed(2)}</p>
-                        <p className="text-zinc-400 text-sm">{customer.visit_count} visits</p>
+                        <p className="text-2xl font-bold text-emerald-300">${customer.total_spent.toFixed(2)}</p>
+                        <p className="text-slate-300 text-sm">{customer.visit_count} visits</p>
                         {customer.last_visit && (
-                          <p className="text-zinc-500 text-xs mt-2">
+                          <p className="text-slate-400 text-xs mt-2">
                             Last: {new Date(customer.last_visit).toLocaleDateString()}
                           </p>
                         )}
@@ -233,13 +233,13 @@ export default function CustomersPage() {
                             setEditingCustomer(customer);
                             setFormData({ name: customer.name, phone: customer.phone, email: customer.email || '' });
                           }}
-                          className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition"
+                          className="mt-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-lg font-semibold transition"
                         >
                           EDIT
                         </button>
                         <button
                           onClick={() => setDeletingCustomer(customer)}
-                          className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition"
+                          className="mt-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg font-semibold transition"
                         >
                           DELETE
                         </button>
