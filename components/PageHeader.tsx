@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import type { AppRole } from '@/lib/api-auth';
-import { signOut } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 type PageHeaderProps = {
   title: string;
@@ -11,36 +10,50 @@ type PageHeaderProps = {
 };
 
 export default function PageHeader({ title, role }: PageHeaderProps) {
-  const router = useRouter();
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [userName, setUserName] = useState('User');
+  const [clock, setClock] = useState(() => new Date());
 
-  const onSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await signOut();
-    } finally {
-      router.replace('/auth');
-      setIsSigningOut(false);
-    }
-  };
+  useEffect(() => {
+    let mounted = true;
+
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      if (!mounted) return;
+      const fullName = user?.user_metadata?.full_name;
+      setUserName(typeof fullName === 'string' && fullName.trim().length > 0 ? fullName : user?.email ?? 'User');
+    };
+
+    void loadUser();
+
+    const timer = setInterval(() => setClock(new Date()), 1000);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const roleLabel = useMemo(() => {
+    if (!role) return 'Staff';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  }, [role]);
 
   return (
-    <div className="bg-slate-900/95 border-b border-slate-800 px-6 py-5 flex justify-between items-center backdrop-blur">
-      <h1 className="text-3xl font-black text-amber-400 tracking-tight">{title}</h1>
-      <div className="flex items-center gap-3">
-        {role && (
-          <span className="px-3 py-1 rounded-full border border-slate-700 bg-slate-800 text-xs font-bold uppercase text-slate-200">
-            Role: {role}
-          </span>
-        )}
-        <button
-          onClick={onSignOut}
-          disabled={isSigningOut}
-          className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 rounded-lg font-semibold transition"
-        >
-          {isSigningOut ? 'Signing Out...' : 'Sign Out'}
-        </button>
+    <header className="bg-white border-b border-slate-200 px-8 py-5 flex justify-between items-center">
+      <div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">{title}</h1>
+        <p className="text-sm text-slate-500">Modern bar operations console</p>
       </div>
-    </div>
+      <div className="flex items-center gap-3">
+        <span className="px-3 py-1 rounded-full border border-blue-200 bg-blue-50 text-xs font-bold text-blue-700">
+          {roleLabel}
+        </span>
+        <span className="px-3 py-1 rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-700">
+          {userName}
+        </span>
+        <span className="px-3 py-1 rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-700">
+          {clock.toLocaleString()}
+        </span>
+      </div>
+    </header>
   );
 }

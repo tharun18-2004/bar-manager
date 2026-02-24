@@ -7,6 +7,12 @@ interface ReportData {
   dateRange: string;
 }
 
+interface InvoiceData {
+  orderId: string;
+  staffName: string;
+  items: Array<{ name: string; quantity: number; unitPrice: number }>;
+}
+
 function formatCurrency(value: number) {
   return `$${value.toFixed(2)}`;
 }
@@ -114,4 +120,54 @@ export function generatePDF(data: ReportData) {
 
 export function downloadPDF(doc: jsPDF, filename: string = 'report.pdf') {
   doc.save(filename);
+}
+
+export function generateInvoicePDF(data: InvoiceData) {
+  const doc = new jsPDF();
+  const left = 20;
+  let y = 20;
+
+  const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const tax = subtotal * 0.1;
+  const total = subtotal + tax;
+
+  doc.setFontSize(20);
+  doc.text('BAR-LOGIC INVOICE', left, y);
+  y += 10;
+
+  doc.setFontSize(10);
+  doc.text(`Invoice ID: ${data.orderId}`, left, y);
+  y += 6;
+  doc.text(`Staff: ${data.staffName}`, left, y);
+  y += 6;
+  doc.text(`Date: ${new Date().toLocaleString()}`, left, y);
+  y += 10;
+
+  doc.setFontSize(12);
+  doc.text('Items', left, y);
+  y += 6;
+  doc.setLineWidth(0.2);
+  doc.line(left, y, 190, y);
+  y += 6;
+
+  doc.setFontSize(10);
+  for (const item of data.items) {
+    const lineTotal = item.quantity * item.unitPrice;
+    doc.text(`${item.name} x${item.quantity}`, left, y);
+    doc.text(formatCurrency(lineTotal), 190, y, { align: 'right' });
+    y += 6;
+  }
+
+  y += 4;
+  doc.line(left, y, 190, y);
+  y += 8;
+
+  doc.text(`Subtotal: ${formatCurrency(subtotal)}`, 190, y, { align: 'right' });
+  y += 6;
+  doc.text(`Tax (10%): ${formatCurrency(tax)}`, 190, y, { align: 'right' });
+  y += 6;
+  doc.setFontSize(12);
+  doc.text(`Total: ${formatCurrency(total)}`, 190, y, { align: 'right' });
+
+  return doc;
 }

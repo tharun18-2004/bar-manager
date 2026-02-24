@@ -7,9 +7,9 @@ import { getCurrentUser, signIn, signUp } from '@/lib/auth';
 import { Suspense } from 'react';
 
 function resolveNextPath(nextValue: string | null): string {
-  if (!nextValue) return '/employee';
-  if (!nextValue.startsWith('/')) return '/employee';
-  if (nextValue.startsWith('//')) return '/employee';
+  if (!nextValue) return '/dashboard';
+  if (!nextValue.startsWith('/')) return '/dashboard';
+  if (nextValue.startsWith('//')) return '/dashboard';
   return nextValue;
 }
 
@@ -21,7 +21,7 @@ function resolveRole(rawRole: unknown): 'staff' | 'manager' | 'owner' {
 }
 
 function defaultPathForRole(role: 'staff' | 'manager' | 'owner') {
-  return role === 'owner' ? '/owner' : '/employee';
+  return '/dashboard';
 }
 
 function AuthPageContent() {
@@ -53,7 +53,7 @@ function AuthPageContent() {
         const effectiveRole = appRole === 'owner' || profileRole === 'owner' ? 'owner' : appRole;
 
         const requestedNext = searchParams.get('next');
-        const selectedPath = loginMode === 'owner' ? '/owner' : '/employee';
+        const selectedPath = '/dashboard';
         const nextPath = requestedNext
           ? resolveNextPath(requestedNext)
           : selectedPath === defaultPathForRole(effectiveRole)
@@ -66,7 +66,7 @@ function AuthPageContent() {
         }
 
         if (loginMode === 'staff' && effectiveRole === 'owner') {
-          router.push('/owner');
+          router.push('/dashboard');
           return;
         }
 

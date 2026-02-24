@@ -105,17 +105,17 @@ export default function ReportsPage() {
   }, [fetchReportData, isAuthorized]);
 
   if (isChecking) {
-    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Checking access...</div>;
+    return <div className="min-h-screen bg-slate-100 text-slate-700 flex items-center justify-center">Checking access...</div>;
   }
 
   if (!isAuthorized) return null;
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white">
+    <div className="flex h-screen bg-slate-100 text-slate-900">
       <Sidebar role={role} />
 
-      <div className="flex-1 flex flex-col">
-        <PageHeader title="REPORTS & ANALYTICS" role={role} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <PageHeader title="Reports & Analytics" role={role} />
 
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="flex gap-3 mb-8">
@@ -124,7 +124,7 @@ export default function ReportsPage() {
                 key={range}
                 onClick={() => setDateRange(range)}
                 className={`px-6 py-2 rounded-lg font-bold uppercase text-sm transition ${
-                  dateRange === range ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  dateRange === range ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 {range === 'today' && 'Today'}
@@ -139,7 +139,7 @@ export default function ReportsPage() {
                 exporting,
                 hasSalesData: Boolean(salesData),
               })}
-              className="ml-auto px-6 py-2 rounded-lg font-bold uppercase text-sm transition bg-emerald-600 text-white hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-300 disabled:cursor-not-allowed"
+              className="ml-auto px-6 py-2 rounded-lg font-bold uppercase text-sm transition bg-blue-600 text-white hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-600 disabled:cursor-not-allowed"
             >
               {getPdfButtonLabel(exporting)}
             </button>
@@ -152,7 +152,7 @@ export default function ReportsPage() {
           )}
 
           {loading ? (
-            <p className="text-slate-400">Loading reports...</p>
+            <p className="text-slate-500">Loading reports...</p>
           ) : salesData ? (
             <>
               <div className="grid grid-cols-4 gap-6 mb-8">
@@ -162,18 +162,18 @@ export default function ReportsPage() {
                 <StatCard label="Voided" value={salesData.total_voided.toString()} type="danger" />
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
-                <h2 className="text-2xl font-bold mb-6 text-amber-400">Top 5 Items by Revenue</h2>
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <h2 className="text-2xl font-bold mb-6 text-slate-900">Top 5 Items by Revenue</h2>
                 <div className="space-y-4">
                   {salesData.top_items.map((item, index) => (
                     <div key={item.name}>
                       <div className="flex justify-between mb-2">
-                        <span className="font-semibold">
+                        <span className="font-semibold text-slate-700">
                           {index + 1}. {item.name}
                         </span>
-                        <span className="text-emerald-300 font-bold">${item.revenue.toFixed(2)}</span>
+                        <span className="text-blue-700 font-bold">${item.revenue.toFixed(2)}</span>
                       </div>
-                      <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                      <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
                         <div
                           className="bg-gradient-to-r from-blue-500 to-green-500 h-full"
                           style={{
@@ -181,19 +181,19 @@ export default function ReportsPage() {
                           }}
                         />
                       </div>
-                      <p className="text-slate-400 text-sm mt-1">Sold: {item.count} units</p>
+                      <p className="text-slate-500 text-sm mt-1">Sold: {item.count} units</p>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6 mt-8">
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
-                  <h3 className="text-xl font-bold mb-4 text-amber-400">Performance</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-xl font-bold mb-4 text-slate-900">Performance</h3>
                   <div className="space-y-3">
                     <p>
-                      <span className="text-slate-300">Efficiency: </span>
-                      <span className="text-emerald-300 font-bold">
+                      <span className="text-slate-500">Efficiency: </span>
+                      <span className="text-emerald-600 font-bold">
                         {(
                           (1 - salesData.total_voided / (salesData.total_transactions + salesData.total_voided)) *
                           100
@@ -202,22 +202,22 @@ export default function ReportsPage() {
                       </span>
                     </p>
                     <p>
-                      <span className="text-slate-300">Items Sold: </span>
-                      <span className="text-emerald-300 font-bold">
+                      <span className="text-slate-500">Items Sold: </span>
+                      <span className="text-emerald-600 font-bold">
                         {salesData.top_items.reduce((sum, i) => sum + i.count, 0)}
                       </span>
                     </p>
                   </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
-                  <h3 className="text-xl font-bold mb-4 text-amber-400">Status</h3>
-                  <p className="text-emerald-300 text-lg font-bold">System Operational</p>
-                  <p className="text-slate-400 text-sm mt-2">All metrics up to date</p>
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-xl font-bold mb-4 text-slate-900">Status</h3>
+                  <p className="text-emerald-600 text-lg font-bold">System Operational</p>
+                  <p className="text-slate-500 text-sm mt-2">All metrics up to date</p>
                 </div>
               </div>
             </>
           ) : (
-            <p className="text-slate-400">No data available</p>
+            <p className="text-slate-500">No data available</p>
           )}
         </div>
       </div>

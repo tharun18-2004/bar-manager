@@ -1,6 +1,11 @@
+ 'use client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import type { AppRole } from '@/lib/api-auth';
+import { signOut } from '@/lib/auth';
 
 type SidebarProps = {
   role?: AppRole | null;
@@ -12,37 +17,12 @@ type NavItem = {
   roles?: AppRole[];
 };
 
-const NAV_SECTIONS: Array<{ title: string; items: NavItem[] }> = [
-  {
-    title: 'Main',
-    items: [
-      { href: '/', label: 'Home' },
-      { href: '/auth', label: 'Sign In' },
-    ],
-  },
-  {
-    title: 'Operations',
-    items: [
-      { href: '/employee', label: 'POS System', roles: ['staff', 'manager', 'owner'] },
-      { href: '/tables', label: 'Tables', roles: ['staff', 'manager', 'owner'] },
-      { href: '/customers', label: 'Customers', roles: ['manager', 'owner'] },
-    ],
-  },
-  {
-    title: 'Management',
-    items: [
-      { href: '/inventory', label: 'Inventory', roles: ['manager', 'owner'] },
-      { href: '/staff', label: 'Staff', roles: ['owner'] },
-    ],
-  },
-  {
-    title: 'Analytics',
-    items: [
-      { href: '/reports', label: 'Reports', roles: ['manager', 'owner'] },
-      { href: '/owner', label: 'Owner Dashboard', roles: ['owner'] },
-      { href: '/owner/audit', label: 'Owner Audit', roles: ['owner'] },
-    ],
-  },
+const NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', roles: ['staff', 'manager', 'owner'] },
+  { href: '/employee', label: 'POS', roles: ['staff', 'manager', 'owner'] },
+  { href: '/reports', label: 'Reports', roles: ['manager', 'owner'] },
+  { href: '/inventory', label: 'Inventory', roles: ['manager', 'owner'] },
+  { href: '/owner/audit', label: 'Audit Logs', roles: ['owner'] },
 ];
 
 function canView(item: NavItem, role?: AppRole | null): boolean {
@@ -53,46 +33,52 @@ function canView(item: NavItem, role?: AppRole | null): boolean {
 
 export default function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const onSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      router.replace('/auth');
+      setIsSigningOut(false);
+    }
+  };
 
   return (
-    <div className="w-64 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 border-r border-slate-800 p-6 flex flex-col max-h-screen overflow-y-auto">
+    <aside className="w-72 bg-white border-r border-slate-200 p-6 flex flex-col max-h-screen overflow-y-auto shadow-sm">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-amber-400">BAR-LOGIC</h1>
-        <p className="text-slate-400 text-xs uppercase mt-1 tracking-wider">Pro Management</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">Bar Logic</p>
+        <h1 className="text-2xl font-black text-slate-900 mt-1">Control Panel</h1>
       </div>
 
-      <nav className="flex-1 space-y-6">
-        {NAV_SECTIONS.map((section) => {
-          const visibleItems = section.items.filter((item) => canView(item, role));
-          if (visibleItems.length === 0) return null;
-
-          return (
-            <div key={section.title}>
-              <p className="text-xs uppercase text-slate-500 font-bold mb-3 px-4">{section.title}</p>
-              <div className="space-y-1">
-                {visibleItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition text-sm font-medium ${
-                      pathname === item.href
-                        ? 'bg-amber-500/15 border border-amber-400/30 text-amber-200'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <nav className="flex-1 space-y-2">
+        {NAV_ITEMS.filter((item) => canView(item, role)).map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center px-4 py-3 rounded-xl transition text-sm font-semibold ${
+              pathname === item.href
+                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                : 'text-slate-700 hover:bg-slate-100 border border-transparent'
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
       </nav>
 
-      <div className="border-t border-slate-800 pt-4 mt-6">
-        <p className="text-slate-400 text-xs text-center">v2.0.0</p>
-        <p className="text-slate-500 text-xs text-center mt-1">Copyright 2026 Bar Logic</p>
+      <div className="border-t border-slate-200 pt-4 mt-6">
+        <button
+          type="button"
+          onClick={() => void onSignOut()}
+          disabled={isSigningOut}
+          className="w-full px-4 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-700 disabled:bg-slate-400 font-semibold transition"
+        >
+          {isSigningOut ? 'Logging out...' : 'Logout'}
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }

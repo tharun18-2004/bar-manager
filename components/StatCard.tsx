@@ -6,17 +6,17 @@ interface StatCardProps {
 }
 
 export default function StatCard({ label, value, subValue, type = 'default' }: StatCardProps) {
-  const borderColors = {
-    default: 'border-slate-700 text-slate-100',
-    danger: 'border-rose-800/60 text-rose-300',
-    success: 'border-emerald-800/60 text-emerald-300'
+  const toneClass = {
+    default: 'text-slate-900 border-slate-200',
+    danger: 'text-rose-700 border-rose-200 bg-rose-50/40',
+    success: 'text-emerald-700 border-emerald-200 bg-emerald-50/40',
   };
 
   return (
-    <div className={`bg-slate-900 p-5 rounded-xl border ${borderColors[type]} transition-all hover:-translate-y-0.5`}>
-      <p className="text-slate-400 text-xs uppercase tracking-widest font-bold mb-1">{label}</p>
-      <p className="text-4xl font-mono font-black">{value}</p>
-      {subValue && <p className="text-sm mt-2 opacity-70">{subValue}</p>}
+    <div className={`bg-white p-5 rounded-2xl border shadow-sm ${toneClass[type]}`}>
+      <p className="text-slate-500 text-xs uppercase tracking-widest font-bold mb-2">{label}</p>
+      <p className="text-3xl font-black">{value}</p>
+      {subValue && <p className="text-sm mt-2 text-slate-500">{subValue}</p>}
     </div>
   );
 }
