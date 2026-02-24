@@ -86,15 +86,15 @@ function AuthPageContent() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white grid grid-cols-1 lg:grid-cols-2">
-      <div className="hidden lg:flex bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 flex-col items-center justify-center p-10">
-        <h1 className="text-6xl font-black text-slate-950 mb-4 tracking-tight">BAR-LOGIC</h1>
-        <p className="text-2xl text-amber-100 text-center max-w-md">Professional Bar Management System</p>
-        <div className="mt-10 rounded-2xl bg-black/20 border border-black/20 px-6 py-4 text-amber-50 text-sm">
+      <div className="flex bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 flex-col items-center justify-center p-8 lg:p-10 min-h-56 lg:min-h-screen">
+        <h1 className="text-5xl lg:text-6xl font-black text-slate-950 mb-3 tracking-tight">BAR-LOGIC</h1>
+        <p className="text-lg lg:text-2xl text-amber-100 text-center max-w-md">Professional Bar Management System</p>
+        <div className="mt-6 lg:mt-10 rounded-2xl bg-black/20 border border-black/20 px-6 py-4 text-amber-50 text-sm">
           Built for staff speed, owner visibility, and operational control.
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6 lg:p-10">
+      <div className="flex items-center justify-center p-6 lg:p-10 -mt-8 lg:mt-0">
         <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8 shadow-2xl">
           <h2 className="text-3xl font-black mb-8 text-amber-400">{isLogin ? 'Sign In' : 'Create Account'}</h2>
 
