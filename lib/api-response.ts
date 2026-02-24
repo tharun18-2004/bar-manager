@@ -6,6 +6,12 @@ export function badRequest(error: string) {
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const maybeMessage = (error as { message?: unknown }).message;
+    if (typeof maybeMessage === 'string' && maybeMessage.trim().length > 0) {
+      return maybeMessage;
+    }
+  }
   return String(error);
 }
 
@@ -22,7 +28,7 @@ function getErrorStack(error: unknown): string | null {
 }
 
 export function serverError(error: unknown, req?: NextRequest) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = getErrorMessage(error);
   const requestId = req?.headers.get('x-request-id') ?? crypto.randomUUID();
   const route = req?.nextUrl?.pathname ?? null;
   const method = req?.method ?? null;
