@@ -21,15 +21,15 @@ export default function VoidModal({ isOpen, onClose, onConfirm, loading = false 
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-red-900/50 w-full max-w-md p-8 rounded-3xl shadow-2xl">
-        <h2 className="text-2xl font-bold text-red-500 mb-2">Confirm Void</h2>
-        <p className="text-zinc-400 mb-6 text-sm">
-          Warning: This action is permanent and will be logged in the Owner&apos;s Corruption Audit trail.
+      <div className="bg-slate-900 border border-rose-900/50 w-full max-w-md p-8 rounded-2xl shadow-2xl">
+        <h2 className="text-2xl font-bold text-rose-400 mb-2">Confirm Void</h2>
+        <p className="text-slate-300 mb-6 text-sm">
+          Warning: this action is permanent and will be logged in the owner audit trail.
         </p>
         
-        <label className="block text-xs font-bold text-zinc-500 uppercase mb-2">Reason for Voiding</label>
+        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Reason for Voiding</label>
         <textarea 
-          className="w-full bg-black border border-zinc-800 rounded-xl p-4 text-white focus:border-red-600 outline-none h-32 mb-6"
+          className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-white focus:border-rose-500 outline-none h-32 mb-6"
           placeholder="e.g., Customer changed mind, Spilled drink, Entry error..."
           value={reason}
           onChange={(e) => setReason(e.target.value)}
@@ -39,7 +39,7 @@ export default function VoidModal({ isOpen, onClose, onConfirm, loading = false 
         <div className="flex gap-3">
           <button 
             onClick={onClose} 
-            className="flex-1 py-3 text-zinc-400 font-bold hover:text-white transition"
+            className="flex-1 py-3 text-slate-300 font-bold hover:text-white transition"
             disabled={loading}
           >
             Cancel
@@ -47,7 +47,7 @@ export default function VoidModal({ isOpen, onClose, onConfirm, loading = false 
           <button 
             onClick={handleConfirm}
             disabled={!reason.trim() || loading}
-            className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-zinc-800 disabled:text-zinc-500 rounded-xl font-bold py-3 transition"
+            className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 rounded-xl font-bold py-3 transition"
           >
             {loading ? 'Voiding...' : 'Confirm & Log'}
           </button>

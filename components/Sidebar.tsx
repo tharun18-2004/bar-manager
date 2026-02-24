@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { AppRole } from '@/lib/api-auth';
 
 type SidebarProps = {
@@ -51,11 +52,13 @@ function canView(item: NavItem, role?: AppRole | null): boolean {
 }
 
 export default function Sidebar({ role }: SidebarProps) {
+  const pathname = usePathname();
+
   return (
-    <div className="w-64 bg-gradient-to-b from-zinc-900 to-black border-r border-zinc-800 p-6 flex flex-col max-h-screen overflow-y-auto">
+    <div className="w-64 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 border-r border-slate-800 p-6 flex flex-col max-h-screen overflow-y-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-blue-500">BAR-LOGIC</h1>
-        <p className="text-zinc-500 text-xs uppercase mt-1 tracking-wider">Pro Management</p>
+        <h1 className="text-2xl font-black text-amber-400">BAR-LOGIC</h1>
+        <p className="text-slate-400 text-xs uppercase mt-1 tracking-wider">Pro Management</p>
       </div>
 
       <nav className="flex-1 space-y-6">
@@ -65,13 +68,17 @@ export default function Sidebar({ role }: SidebarProps) {
 
           return (
             <div key={section.title}>
-              <p className="text-xs uppercase text-zinc-600 font-bold mb-3 px-4">{section.title}</p>
+              <p className="text-xs uppercase text-slate-500 font-bold mb-3 px-4">{section.title}</p>
               <div className="space-y-1">
                 {visibleItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-zinc-800 text-zinc-300 hover:text-white transition text-sm font-medium"
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition text-sm font-medium ${
+                      pathname === item.href
+                        ? 'bg-amber-500/15 border border-amber-400/30 text-amber-200'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white border border-transparent'
+                    }`}
                   >
                     {item.label}
                   </Link>
@@ -82,9 +89,9 @@ export default function Sidebar({ role }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-zinc-800 pt-4 mt-6">
-        <p className="text-zinc-500 text-xs text-center">v2.0.0</p>
-        <p className="text-zinc-600 text-xs text-center mt-1">Copyright 2026 Bar Logic</p>
+      <div className="border-t border-slate-800 pt-4 mt-6">
+        <p className="text-slate-400 text-xs text-center">v2.0.0</p>
+        <p className="text-slate-500 text-xs text-center mt-1">Copyright 2026 Bar Logic</p>
       </div>
     </div>
   );

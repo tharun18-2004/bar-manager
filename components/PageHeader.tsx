@@ -25,18 +25,18 @@ export default function PageHeader({ title, role }: PageHeaderProps) {
   };
 
   return (
-    <div className="bg-zinc-900 border-b border-zinc-800 p-6 flex justify-between items-center">
-      <h1 className="text-3xl font-bold text-blue-500">{title}</h1>
+    <div className="bg-slate-900/95 border-b border-slate-800 px-6 py-5 flex justify-between items-center backdrop-blur">
+      <h1 className="text-3xl font-black text-amber-400 tracking-tight">{title}</h1>
       <div className="flex items-center gap-3">
         {role && (
-          <span className="px-3 py-1 rounded-full border border-zinc-700 bg-zinc-800 text-xs font-bold uppercase text-zinc-300">
+          <span className="px-3 py-1 rounded-full border border-slate-700 bg-slate-800 text-xs font-bold uppercase text-slate-200">
             Role: {role}
           </span>
         )}
         <button
           onClick={onSignOut}
           disabled={isSigningOut}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 rounded-lg font-semibold transition"
+          className="px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 rounded-lg font-semibold transition"
         >
           {isSigningOut ? 'Signing Out...' : 'Sign Out'}
         </button>
