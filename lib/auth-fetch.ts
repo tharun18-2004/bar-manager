@@ -9,8 +9,25 @@ async function extractErrorMessage(response: Response): Promise<string> {
   try {
     const payload = await response.json();
     if (payload && typeof payload.error === 'string' && payload.error.trim().length > 0) {
-      return payload.error;
+      const requestId =
+        typeof payload.requestId === 'string' && payload.requestId.trim().length > 0
+          ? payload.requestId
+          : null;
+      return requestId ? `${payload.error} (requestId: ${requestId})` : payload.error;
     }
+
+    if (payload && payload.error && typeof payload.error === 'object') {
+      const nestedMessage =
+        typeof payload.error.message === 'string' && payload.error.message.trim().length > 0
+          ? payload.error.message
+          : JSON.stringify(payload.error);
+      const requestId =
+        typeof payload.requestId === 'string' && payload.requestId.trim().length > 0
+          ? payload.requestId
+          : null;
+      return requestId ? `${nestedMessage} (requestId: ${requestId})` : nestedMessage;
+    }
+
     return fallback;
   } catch {
     return fallback;

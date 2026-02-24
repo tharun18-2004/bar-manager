@@ -15,10 +15,10 @@ export async function handleApiError(response: Response) {
 
 export function formatError(error: unknown): string {
   if (error instanceof AppError) {
-    return error.message;
+    return typeof error.message === 'string' ? error.message : JSON.stringify(error.message);
   }
   if (error instanceof Error) {
-    return error.message;
+    return typeof error.message === 'string' ? error.message : JSON.stringify(error.message);
   }
   return 'An unexpected error occurred';
 }
