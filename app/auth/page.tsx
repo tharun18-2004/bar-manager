@@ -78,7 +78,12 @@ function AuthPageContent() {
         setIsLogin(true);
       }
     } catch (err) {
-      setError(String(err).split(':')[1]?.trim() || 'Authentication failed');
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.toLowerCase().includes('failed to fetch')) {
+        setError('Cannot reach authentication server. Check Supabase URL/key in Vercel env and redeploy.');
+      } else {
+        setError(String(err).split(':')[1]?.trim() || 'Authentication failed');
+      }
     } finally {
       setLoading(false);
     }
