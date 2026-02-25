@@ -195,13 +195,6 @@ function AuthPageContent() {
             </p>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-slate-700">
-            <p className="text-slate-400 text-sm text-center mb-4">Demo Credentials</p>
-            <div className="space-y-2 text-xs text-slate-500">
-              <p>Email: demo@bar.com</p>
-              <p>Password: Demo@123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

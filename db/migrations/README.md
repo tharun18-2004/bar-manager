@@ -4,6 +4,7 @@ Run these SQL files in Supabase SQL Editor in this exact order:
 
 1. `db/migrations/2026-02-16_add_external_order_id_to_payment_transactions.sql`
 2. `db/migrations/2026-02-16_enable_rls_and_role_policies.sql`
+3. `db/migrations/2026-02-25_align_sales_inventory_schema.sql`
 
 ## Verify Migration Applied
 
