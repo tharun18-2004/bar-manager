@@ -62,16 +62,15 @@ export function generatePDF(data: ReportData) {
       });
     }
 
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(17, 24, 39);
   };
 
   const averageTransaction =
     data.totalTransactions > 0 ? data.totalRevenue / data.totalTransactions : 0;
 
   // Set base colors
-  doc.setFillColor(30, 30, 30);
   doc.setDrawColor(59, 130, 246);
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(17, 24, 39);
 
   // Header
   doc.setFontSize(20);
@@ -130,6 +129,9 @@ export function generateInvoicePDF(data: InvoiceData) {
   const subtotal = data.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const tax = subtotal * 0.1;
   const total = subtotal + tax;
+
+  doc.setTextColor(17, 24, 39);
+  doc.setDrawColor(148, 163, 184);
 
   doc.setFontSize(20);
   doc.text('BAR-LOGIC INVOICE', left, y);
