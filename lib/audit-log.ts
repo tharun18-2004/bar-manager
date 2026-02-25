@@ -26,7 +26,8 @@ function nowIso() {
 }
 
 function shouldPersistAuditToDb() {
-  return process.env.AUDIT_LOG_TO_DB === '1';
+  // Persist by default. Set AUDIT_LOG_TO_DB=0 only when explicitly disabling DB writes.
+  return process.env.AUDIT_LOG_TO_DB !== '0';
 }
 
 function formatAuditEvent(input: AuditEventInput) {
@@ -50,11 +51,11 @@ export async function writeAuditEvent(input: AuditEventInput) {
   const event = formatAuditEvent(input);
 
   try {
-    console.log("AUDIT ENV:", process.env.AUDIT_LOG_TO_DB);
     console.info(
       JSON.stringify({
         level: 'info',
         type: 'audit_event',
+        persistToDb: shouldPersistAuditToDb(),
         ...event,
       })
     );
@@ -63,7 +64,6 @@ export async function writeAuditEvent(input: AuditEventInput) {
       return;
     }
 
-    console.log("Audit insert triggered");
     const { error } = await supabase.from('audit_logs').insert([
       {
         request_id: event.requestId,
@@ -87,6 +87,8 @@ export async function writeAuditEvent(input: AuditEventInput) {
           level: 'error',
           type: 'audit_event_persist_failed',
           requestId: event.requestId,
+          action: event.action,
+          resource: event.resource,
           message: error.message,
         })
       );

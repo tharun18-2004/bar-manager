@@ -47,6 +47,21 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'staff.create',
+      resource: 'staff',
+      resourceId: data?.[0]?.id ?? null,
+      outcome: 'success',
+      after: data?.[0] ?? null,
+      metadata: {
+        createdFields: ['name', 'email', 'role'],
+      },
+    });
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     return serverError(error, req);
