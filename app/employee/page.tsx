@@ -153,6 +153,25 @@ export default function EmployeePage() {
 
     setLoading(true);
     try {
+      const orderId = `BAR-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Date.now()}`;
+
+      await authFetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderId,
+          items: orderItems.map((item) => ({
+            item_id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.price,
+            line_total: Number((item.price * item.quantity).toFixed(2)),
+          })),
+          total: totalPrice,
+          payment_method: paymentMethod,
+        }),
+      });
+
       for (const item of orderItems) {
         await authFetch('/api/sales', {
           method: 'POST',
@@ -166,7 +185,6 @@ export default function EmployeePage() {
         });
       }
 
-      const orderId = `BAR-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Date.now()}`;
       try {
         await authFetch('/api/payments', {
           method: 'POST',

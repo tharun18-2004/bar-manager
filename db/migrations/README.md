@@ -7,6 +7,7 @@ Run these SQL files in Supabase SQL Editor in this exact order:
 3. `db/migrations/2026-02-25_align_sales_inventory_schema.sql`
 4. `db/migrations/2026-02-25_add_table_labels_and_order_reference.sql`
 5. `db/migrations/2026-02-25_add_payment_method_to_transactions.sql`
+6. `db/migrations/2026-02-25_add_orders_table.sql`
 
 ## Verify Migration Applied
 
