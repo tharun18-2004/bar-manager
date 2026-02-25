@@ -19,7 +19,7 @@ interface Sale {
 }
 
 export default function OwnerPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['owner']);
+  const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
   const [sales, setSales] = useState<Sale[]>([]);
   const [insights, setInsights] = useState<string>('');
   const [loading, setLoading] = useState(true);

@@ -7,7 +7,7 @@ import { badRequest, parseDateRange, rangeStartIso, serverError } from '@/lib/ap
 // Calculate aggregated sales data with date filtering
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);

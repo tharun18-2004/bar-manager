@@ -158,15 +158,15 @@ test('POST /api/staff with owner token reaches request validation', async () => 
   assert.equal(payload.error, 'role must be one of: bartender, waiter, manager');
 });
 
-test('GET /api/reports with manager token reaches request validation', async () => {
-  const response = await fetch(`${BASE_URL}/api/reports?range=bad-range`, {
+test('GET /api/reports returns 403 for manager role token', async () => {
+  const response = await fetch(`${BASE_URL}/api/reports?range=week`, {
     headers: { authorization: 'Bearer test-manager' },
   });
   const payload = await response.json();
 
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 403);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'range must be one of: today, week, month');
+  assert.equal(payload.error, 'Forbidden');
 });
 
 test('GET /api/sales with staff token validates voided filter', async () => {

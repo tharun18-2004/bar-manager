@@ -28,11 +28,22 @@ export default function DashboardPage() {
   });
 
   const fetchStats = useCallback(async () => {
+    if (role !== 'owner') {
+      setStats({
+        totalSalesToday: 0,
+        totalOrders: 0,
+        topSellingItem: 'Owner only',
+        lowStockItems: null,
+        topItems: [],
+      });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const isOwner = role === 'owner';
       const query = new URLSearchParams({
-        range: isOwner ? 'month' : 'today',
+        range: 'month',
         tz_offset: String(new Date().getTimezoneOffset()),
       });
       const res = await authFetch(`/api/dashboard-analytics?${query.toString()}`);
@@ -61,7 +72,10 @@ export default function DashboardPage() {
     void fetchStats();
   }, [fetchStats, isAuthorized]);
 
-  const canExport = useMemo(() => !loading && !exporting && stats.totalOrders > 0, [exporting, loading, stats.totalOrders]);
+  const canExport = useMemo(
+    () => role === 'owner' && !loading && !exporting && stats.totalOrders > 0,
+    [exporting, loading, role, stats.totalOrders]
+  );
 
   const handleDownloadPdf = async () => {
     if (!canExport) return;
@@ -90,56 +104,61 @@ export default function DashboardPage() {
     <div className="flex h-screen bg-slate-100 text-slate-900">
       <Sidebar role={role} />
       <div className="flex-1 flex flex-col min-w-0">
-        <PageHeader title="Dashboard Analytics" role={role} />
+        <PageHeader title={role === 'owner' ? 'Dashboard Analytics' : 'Staff Dashboard'} role={role} />
         <main className="flex-1 p-8 overflow-y-auto">
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard label={role === 'owner' ? 'Total Sales (Month)' : 'Total Sales Today'} value={`$${stats.totalSalesToday.toFixed(2)}`} />
-            <StatCard label={role === 'owner' ? 'Total Orders (Month)' : 'Total Orders'} value={stats.totalOrders} />
-            <StatCard label="Top Selling Item" value={stats.topSellingItem} />
-            <StatCard
-              label="Low Stock Items"
-              value={
-                role === 'owner'
-                  ? `${stats.lowStockItems ?? 0} items`
-                  : 'Owner only'
-              }
-              type={role === 'owner' && (stats.lowStockItems ?? 0) > 0 ? 'danger' : 'success'}
-            />
-          </div>
-
-          <section className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-slate-900">
-                {role === 'owner' ? 'Top Items (Month)' : 'Top Items Today'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => void handleDownloadPdf()}
-                disabled={!canExport}
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-600 transition"
-              >
-                {exporting ? 'Generating...' : 'Download Invoice PDF'}
-              </button>
-            </div>
-            {loading ? (
-              <p className="text-slate-500">Loading analytics...</p>
-            ) : stats.topItems.length === 0 ? (
-              <p className="text-slate-500">No sales recorded today.</p>
-            ) : (
-              <div className="space-y-3">
-                {stats.topItems.map((item, index) => (
-                  <div key={item.name} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="font-semibold text-slate-800">
-                      {index + 1}. {item.name}
-                    </p>
-                    <p className="text-sm font-semibold text-slate-600">
-                      Sold {item.count} | ${item.revenue.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
+          {role !== 'owner' ? (
+            <section className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-3">Operational Access</h2>
+              <p className="text-slate-600">
+                Staff accounts can use POS and Tables. Revenue analytics, inventory, reports, and audit logs are owner-only.
+              </p>
+            </section>
+          ) : (
+            <>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                <StatCard label="Total Sales (Month)" value={`$${stats.totalSalesToday.toFixed(2)}`} />
+                <StatCard label="Total Orders (Month)" value={stats.totalOrders} />
+                <StatCard label="Top Selling Item" value={stats.topSellingItem} />
+                <StatCard
+                  label="Low Stock Items"
+                  value={`${stats.lowStockItems ?? 0} items`}
+                  type={(stats.lowStockItems ?? 0) > 0 ? 'danger' : 'success'}
+                />
               </div>
-            )}
-          </section>
+
+              <section className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-xl font-bold text-slate-900">Top Items (Month)</h2>
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadPdf()}
+                    disabled={!canExport}
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-600 transition"
+                  >
+                    {exporting ? 'Generating...' : 'Download Invoice PDF'}
+                  </button>
+                </div>
+                {loading ? (
+                  <p className="text-slate-500">Loading analytics...</p>
+                ) : stats.topItems.length === 0 ? (
+                  <p className="text-slate-500">No sales recorded for this month.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {stats.topItems.map((item, index) => (
+                      <div key={item.name} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="font-semibold text-slate-800">
+                          {index + 1}. {item.name}
+                        </p>
+                        <p className="text-sm font-semibold text-slate-600">
+                          Sold {item.count} | ${item.revenue.toFixed(2)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </main>
       </div>
     </div>

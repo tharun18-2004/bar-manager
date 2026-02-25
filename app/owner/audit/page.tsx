@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import PageHeader from '@/components/PageHeader';
 import { authFetch } from '@/lib/auth-fetch';
+import { formatError } from '@/lib/errors';
 import { useRouteGuard } from '@/lib/route-guard';
 
 interface AuditEntry {
@@ -25,7 +26,7 @@ interface AuditPage {
 }
 
 export default function OwnerAuditPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['owner']);
+  const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState('');
@@ -57,6 +58,9 @@ export default function OwnerAuditPage() {
         const query = params.toString();
         const res = await authFetch(`/api/audit${query ? `?${query}` : ''}`);
         const payload = await res.json();
+        if (typeof payload.warning === 'string' && payload.warning.trim()) {
+          setAuditError(payload.warning);
+        }
         setAuditLogs(payload.data || []);
         const page = (payload.page || {
           limit: auditLimit,
@@ -67,7 +71,7 @@ export default function OwnerAuditPage() {
         setAuditHasMore(Boolean(page.hasMore));
       } catch (error) {
         console.error('Failed to fetch audit logs:', error);
-        setAuditError('Failed to load audit logs.');
+        setAuditError(formatError(error));
         setAuditNextCursor(null);
         setAuditHasMore(false);
       } finally {

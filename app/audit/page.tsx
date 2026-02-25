@@ -6,7 +6,7 @@ import { useRouteGuard } from '@/lib/route-guard';
 
 export default function AuditRedirectPage() {
   const router = useRouter();
-  const { isChecking, isAuthorized } = useRouteGuard(['owner'], { unauthorizedRedirect: '/dashboard' });
+  const { isChecking, isAuthorized } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
 
   useEffect(() => {
     if (!isAuthorized) return;

@@ -59,7 +59,7 @@ type OwnerAnalyticsPayload = {
 const PAYMENT_COLORS = ['#2563eb', '#0891b2', '#16a34a', '#ea580c', '#a21caf'];
 
 export default function OwnerAnalyticsPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/dashboard' });
+  const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<OwnerAnalyticsPayload | null>(null);

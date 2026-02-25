@@ -22,7 +22,7 @@ interface SalesData {
 }
 
 export default function ReportsPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['manager', 'owner']);
+  const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
   const [salesData, setSalesData] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);

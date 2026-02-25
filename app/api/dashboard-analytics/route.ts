@@ -12,7 +12,7 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
@@ -59,4 +59,3 @@ export async function GET(req: NextRequest) {
     return serverError(error, req);
   }
 }
-

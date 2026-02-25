@@ -20,6 +20,15 @@ function isMissingAuditTableError(error: unknown) {
   return message.includes('audit_logs') && message.includes('does not exist');
 }
 
+function isAuditAccessPolicyError(error: unknown) {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    message.includes('permission denied') ||
+    message.includes('row-level security') ||
+    message.includes('insufficient privilege')
+  );
+}
+
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
@@ -121,11 +130,11 @@ export async function GET(req: NextRequest) {
       .limit(limit + 1);
 
     if (error) {
-      if (isMissingAuditTableError(error)) {
+      if (isMissingAuditTableError(error) || isAuditAccessPolicyError(error)) {
         return NextResponse.json({
           success: true,
           data: [],
-          warning: 'audit_logs table is not configured',
+          warning: 'audit_logs is not accessible in this environment',
           page: emptyPage(limit),
         });
       }
