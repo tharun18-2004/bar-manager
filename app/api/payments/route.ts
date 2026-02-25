@@ -28,10 +28,18 @@ function isMissingExternalOrderIdColumnError(error: unknown): boolean {
   return message.includes('external_order_id') && message.includes('column');
 }
 
+function isMissingPaymentMethodColumnError(error: unknown): boolean {
+  const message = getErrorMessage(error);
+  return message.includes('payment_method') && message.includes('column');
+}
+
+const PAYMENT_METHODS = new Set(['cash', 'card', 'upi', 'complimentary']);
+
 type PaymentLookupRow = {
   id: number;
   order_id: string | null;
   external_order_id: string | null;
+  payment_method: string | null;
   stripe_id: string | null;
   status: string | null;
   amount: number | null;
@@ -44,9 +52,13 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
-    const { amount, orderId, staffName, items } = await req.json();
+    const { amount, orderId, staffName, items, paymentMethod } = await req.json();
     const parsedAmount = Number(amount);
     const normalizedOrderId = typeof orderId === 'string' ? orderId.trim() : '';
+    const normalizedPaymentMethod =
+      typeof paymentMethod === 'string' && paymentMethod.trim().length > 0
+        ? paymentMethod.trim().toLowerCase()
+        : 'complimentary';
     const resolvedStaff = auth.user.email ?? staffName ?? 'staff';
     const transactionId = `TXN-${Date.now()}`;
 
@@ -58,6 +70,9 @@ export async function POST(req: NextRequest) {
     }
     if (!Array.isArray(items) || items.length === 0) {
       return badRequest('items must be a non-empty array');
+    }
+    if (!PAYMENT_METHODS.has(normalizedPaymentMethod)) {
+      return badRequest('paymentMethod must be one of: cash, card, upi, complimentary');
     }
 
     // Log free transaction (no Stripe processing)
@@ -76,24 +91,38 @@ export async function POST(req: NextRequest) {
         staff_name: resolvedStaff,
         amount: parsedAmount,
         stripe_id: transactionId,
+        payment_method: normalizedPaymentMethod,
         status: 'completed',
       },
     ]);
 
     if (insertWithExternalId.error) {
-      if (!isMissingExternalOrderIdColumnError(insertWithExternalId.error)) {
+      if (
+        !isMissingExternalOrderIdColumnError(insertWithExternalId.error) &&
+        !isMissingPaymentMethodColumnError(insertWithExternalId.error)
+      ) {
         throw insertWithExternalId.error;
       }
 
       // Backward-compatible fallback before migration is applied.
+      const fallbackRow: Record<string, unknown> = {
+        order_id: isUuid(normalizedOrderId) ? normalizedOrderId : null,
+        staff_name: resolvedStaff,
+        amount: parsedAmount,
+        stripe_id: transactionId,
+        status: 'completed',
+      };
+
+      if (!isMissingExternalOrderIdColumnError(insertWithExternalId.error)) {
+        fallbackRow.external_order_id = isUuid(normalizedOrderId) ? null : normalizedOrderId;
+      }
+
+      if (!isMissingPaymentMethodColumnError(insertWithExternalId.error)) {
+        fallbackRow.payment_method = normalizedPaymentMethod;
+      }
+
       const fallbackInsert = await supabase.from('payment_transactions').insert([
-        {
-          order_id: isUuid(normalizedOrderId) ? normalizedOrderId : null,
-          staff_name: resolvedStaff,
-          amount: parsedAmount,
-          stripe_id: transactionId,
-          status: 'completed',
-        },
+        fallbackRow,
       ]);
       if (fallbackInsert.error) throw fallbackInsert.error;
     }
@@ -111,11 +140,13 @@ export async function POST(req: NextRequest) {
         orderId: normalizedOrderId,
         amount: parsedAmount,
         itemsCount: items.length,
+        paymentMethod: normalizedPaymentMethod,
       },
       after: {
         orderId: normalizedOrderId,
         amount: parsedAmount,
         staffName: resolvedStaff,
+        paymentMethod: normalizedPaymentMethod,
         transactionId,
       },
     });
@@ -144,7 +175,7 @@ export async function GET(req: NextRequest) {
 
     const normalizedOrderId = orderId.trim();
 
-    const baseSelect = 'id, order_id, external_order_id, stripe_id, status, amount, staff_name, created_at';
+    const baseSelect = 'id, order_id, external_order_id, payment_method, stripe_id, status, amount, staff_name, created_at';
     const queryByUuid = isUuid(normalizedOrderId);
 
     const primaryQuery = queryByUuid
@@ -176,7 +207,7 @@ export async function GET(req: NextRequest) {
         .limit(1)
         .maybeSingle();
       data = fallbackByStripe.data
-        ? { ...fallbackByStripe.data, external_order_id: null }
+        ? { ...fallbackByStripe.data, external_order_id: null, payment_method: null }
         : null;
       error = fallbackByStripe.error;
     } else if (!queryByUuid && !data) {
@@ -188,7 +219,7 @@ export async function GET(req: NextRequest) {
         .limit(1)
         .maybeSingle();
       data = fallbackByStripe.data
-        ? { ...fallbackByStripe.data, external_order_id: null }
+        ? { ...fallbackByStripe.data, external_order_id: null, payment_method: null }
         : null;
       error = fallbackByStripe.error;
     }

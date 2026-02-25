@@ -15,6 +15,7 @@ const mockState = {
   insertBodies: [],
   postCount: 0,
   failInsertWithMissingColumnOnce: false,
+  failInsertWithMissingPaymentMethodColumnOnce: false,
   failInsertAlreadyUsed: false,
   queryLog: [],
   auditInserts: [],
@@ -25,6 +26,7 @@ function resetMockState() {
   mockState.insertBodies = [];
   mockState.postCount = 0;
   mockState.failInsertWithMissingColumnOnce = false;
+  mockState.failInsertWithMissingPaymentMethodColumnOnce = false;
   mockState.failInsertAlreadyUsed = false;
   mockState.queryLog = [];
   mockState.auditInserts = [];
@@ -73,6 +75,14 @@ function startMockSupabaseServer() {
           mockState.failInsertAlreadyUsed = true;
           json(res, 400, {
             message: 'column "external_order_id" of relation "payment_transactions" does not exist',
+          });
+          return;
+        }
+
+        if (mockState.failInsertWithMissingPaymentMethodColumnOnce && !mockState.failInsertAlreadyUsed) {
+          mockState.failInsertAlreadyUsed = true;
+          json(res, 400, {
+            message: 'column "payment_method" of relation "payment_transactions" does not exist',
           });
           return;
         }
@@ -162,10 +172,35 @@ test('POST /api/payments stores UUID in order_id', async () => {
   assert.equal(mockState.inserts.length, 1);
   assert.equal(mockState.inserts[0].order_id, uuidOrderId);
   assert.equal(mockState.inserts[0].external_order_id, null);
+  assert.equal(mockState.inserts[0].payment_method, 'complimentary');
   assert.equal(mockState.auditInserts.length, 1);
   assert.equal(mockState.auditInserts[0].action, 'payment.create');
   assert.equal(mockState.auditInserts[0].resource, 'payment_transactions');
   assert.equal(mockState.auditInserts[0].resource_id, payload.transactionId);
+});
+
+test('POST /api/payments stores selected payment method', async () => {
+  const response = await fetch(`${BASE_URL}/api/payments`, {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer test-owner',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      orderId: 'ORDER-METHOD',
+      amount: 42,
+      paymentMethod: 'card',
+      items: [{ name: 'Negroni', qty: 1 }],
+    }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.equal(mockState.inserts.length, 1);
+  assert.equal(mockState.inserts[0].payment_method, 'card');
+  assert.equal(mockState.auditInserts.length, 1);
+  assert.equal(mockState.auditInserts[0].metadata.paymentMethod, 'card');
 });
 
 test('POST /api/payments stores non-UUID in external_order_id', async () => {
@@ -233,6 +268,54 @@ test('POST /api/payments falls back when external_order_id column is missing', a
   assert.equal(Object.hasOwn(mockState.inserts[0], 'external_order_id'), false);
   assert.equal(mockState.inserts[0].order_id, null);
   assert.equal(mockState.auditInserts.length, 1);
+});
+
+test('POST /api/payments falls back when payment_method column is missing', async () => {
+  mockState.failInsertWithMissingPaymentMethodColumnOnce = true;
+
+  const response = await fetch(`${BASE_URL}/api/payments`, {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer test-owner',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      orderId: 'ORDER-LEGACY-PAYMENT',
+      amount: 20,
+      paymentMethod: 'cash',
+      items: [{ name: 'Soda', qty: 1 }],
+    }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.success, true);
+  assert.equal(mockState.postCount, 2);
+  assert.equal(mockState.insertBodies[0].payment_method, 'cash');
+  assert.equal(mockState.inserts.length, 1);
+  assert.equal(Object.hasOwn(mockState.inserts[0], 'payment_method'), false);
+});
+
+test('POST /api/payments rejects unsupported payment method', async () => {
+  const response = await fetch(`${BASE_URL}/api/payments`, {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer test-owner',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      orderId: 'ORDER-BAD-METHOD',
+      amount: 50,
+      paymentMethod: 'crypto',
+      items: [{ name: 'Water', qty: 1 }],
+    }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'paymentMethod must be one of: cash, card, upi, complimentary');
+  assert.equal(mockState.auditInserts.length, 0);
 });
 
 test('POST /api/payments validation failure does not write audit event', async () => {

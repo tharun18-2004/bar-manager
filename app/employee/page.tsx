@@ -26,6 +26,8 @@ interface MenuItem {
   quantity: number;
 }
 
+type PaymentMethod = 'cash' | 'card' | 'upi' | 'complimentary';
+
 export default function EmployeePage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'manager', 'owner']);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -33,6 +35,7 @@ export default function EmployeePage() {
   const [voidModal, setVoidModal] = useState(false);
   const [selectedItemToVoid, setSelectedItemToVoid] = useState<OrderItem | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
@@ -163,6 +166,30 @@ export default function EmployeePage() {
         });
       }
 
+      const orderId = `BAR-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Date.now()}`;
+      try {
+        await authFetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            amount: totalPrice,
+            items: orderItems.map((item) => ({
+              name: item.name,
+              qty: item.quantity,
+              unitPrice: item.price,
+            })),
+            paymentMethod,
+            staffName: 'Employee',
+          }),
+        });
+      } catch (paymentError) {
+        setToast({
+          type: 'info',
+          message: `Order saved, but payment log failed: ${formatError(paymentError)}`,
+        });
+      }
+
       setToast({ type: 'success', message: `Order placed. Total: $${totalPrice.toFixed(2)}` });
       setOrderItems([]);
       await fetchMenuItems();
@@ -280,6 +307,26 @@ export default function EmployeePage() {
             </div>
 
             <div className="space-y-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Payment Method</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['cash', 'card', 'upi', 'complimentary'] as const).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setPaymentMethod(method)}
+                      className={`py-2 px-2 rounded-lg text-xs font-bold uppercase transition ${
+                        paymentMethod === method
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 onClick={completeOrder}
                 disabled={loading}
