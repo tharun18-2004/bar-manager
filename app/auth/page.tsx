@@ -90,18 +90,20 @@ function AuthPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white grid grid-cols-1 lg:grid-cols-2">
-      <div className="flex bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 flex-col items-center justify-center p-8 lg:p-10 min-h-56 lg:min-h-screen">
-        <h1 className="text-5xl lg:text-6xl font-black text-slate-950 mb-3 tracking-tight">BAR-LOGIC</h1>
-        <p className="text-lg lg:text-2xl text-amber-100 text-center max-w-md">Professional Bar Management System</p>
-        <div className="mt-6 lg:mt-10 rounded-2xl bg-slate-950/20 border border-black/20 px-6 py-4 text-amber-50 text-sm">
+    <div className="min-h-screen bg-slate-100 text-slate-900 grid grid-cols-1 lg:grid-cols-2">
+      <div className="relative flex bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-600 flex-col items-start justify-end p-8 lg:p-12 min-h-56 lg:min-h-screen overflow-hidden">
+        <div className="absolute -top-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <h1 className="relative text-5xl lg:text-6xl font-black text-white mb-3 tracking-tight">BAR-LOGIC</h1>
+        <p className="relative text-lg lg:text-2xl text-blue-50 max-w-md">Professional Bar Management System</p>
+        <div className="relative mt-6 lg:mt-10 rounded-2xl bg-white/15 border border-white/30 px-6 py-4 text-blue-50 text-sm">
           Built for staff speed, owner visibility, and operational control.
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6 lg:p-10 -mt-8 lg:mt-0">
-        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 lg:p-8 shadow-2xl">
-          <h2 className="text-3xl font-black mb-8 text-amber-400">{isLogin ? 'Sign In' : 'Create Account'}</h2>
+      <div className="flex items-center justify-center p-6 lg:p-10">
+        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm">
+          <h2 className="text-3xl font-black mb-8 text-slate-900">{isLogin ? 'Sign In' : 'Create Account'}</h2>
 
           {isLogin && (
             <div className="mb-6">
@@ -109,10 +111,10 @@ function AuthPageContent() {
                 <button
                   type="button"
                   onClick={() => setLoginMode('staff')}
-                    className={`py-2 rounded-lg font-bold transition ${
+                  className={`py-2 rounded-xl font-bold transition ${
                     loginMode === 'staff'
-                      ? 'bg-amber-400 text-slate-900'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Staff Login
@@ -120,16 +122,16 @@ function AuthPageContent() {
                 <button
                   type="button"
                   onClick={() => setLoginMode('owner')}
-                    className={`py-2 rounded-lg font-bold transition ${
+                  className={`py-2 rounded-xl font-bold transition ${
                     loginMode === 'owner'
-                      ? 'bg-amber-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
                   Owner Login
                 </button>
               </div>
-              <p className="mt-3 text-xs text-slate-400">
+              <p className="mt-3 text-xs text-slate-500">
                 You will be redirected to your allowed dashboard based on account role.
               </p>
             </div>
@@ -142,7 +144,7 @@ function AuthPageContent() {
                 placeholder="Full Name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-400"
                 required={!isLogin}
               />
             )}
@@ -152,7 +154,7 @@ function AuthPageContent() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-400"
               required
             />
 
@@ -161,7 +163,7 @@ function AuthPageContent() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-500"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-400"
               required
             />
 
@@ -171,7 +173,7 @@ function AuthPageContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:bg-slate-700 disabled:text-slate-300 py-3 rounded-lg font-bold transition"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white disabled:bg-slate-300 disabled:text-slate-600 py-3 rounded-xl font-bold transition"
             >
               {loading
                 ? 'Processing...'
@@ -184,11 +186,11 @@ function AuthPageContent() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-slate-300">
+            <p className="text-slate-600">
               {isLogin ? "Don't have an account? " : 'Already have an account? '}
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-amber-300 hover:text-amber-200 font-bold transition"
+                className="text-blue-600 hover:text-blue-500 font-bold transition"
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
@@ -203,7 +205,7 @@ function AuthPageContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 text-slate-700 flex items-center justify-center">Loading...</div>}>
       <AuthPageContent />
     </Suspense>
   );
