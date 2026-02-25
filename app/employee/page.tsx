@@ -27,18 +27,8 @@ interface MenuItem {
 }
 
 type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'COMPLIMENTARY';
-type RazorpayPaymentResult = { paymentId: string; razorpayOrderId: string };
-
-type RazorpayOrderPayload = {
-  success: boolean;
-  data?: {
-    razorpayOrderId: string;
-    amount: number;
-    currency: string;
-    keyId: string;
-  };
-  error?: string;
-};
+// Payment gateway integration intentionally disabled.
+// The POS should only record which payment method was used and not process payments.
 
 export default function EmployeePage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'manager', 'owner']);
@@ -166,11 +156,7 @@ export default function EmployeePage() {
     setLoading(true);
     try {
       const orderId = `BAR-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${Date.now()}`;
-      let razorpayPayment: RazorpayPaymentResult | null = null;
-
-      if (paymentMethod === 'CARD' || paymentMethod === 'UPI') {
-        razorpayPayment = await collectRazorpayPayment(orderId, totalPrice, paymentMethod);
-      }
+      // Do not call any payment gateway. Only record the selected payment method.
 
       await authFetch('/api/orders', {
         method: 'POST',
@@ -203,31 +189,6 @@ export default function EmployeePage() {
         });
       }
 
-      try {
-        await authFetch('/api/payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId,
-            amount: totalPrice,
-            items: orderItems.map((item) => ({
-              name: item.name,
-              qty: item.quantity,
-              unitPrice: item.price,
-            })),
-            paymentMethod,
-            payment_method: paymentMethod,
-            staffName: 'Employee',
-            transactionId: razorpayPayment?.paymentId,
-          }),
-        });
-      } catch (paymentError) {
-        setToast({
-          type: 'info',
-          message: `Order saved, but payment log failed: ${formatError(paymentError)}`,
-        });
-      }
-
       setToast({ type: 'success', message: `Order placed. Total: $${totalPrice.toFixed(2)}` });
       setOrderItems([]);
       await fetchMenuItems();
@@ -238,96 +199,7 @@ export default function EmployeePage() {
     }
   };
 
-  const loadRazorpayCheckout = async () => {
-    if (typeof window === 'undefined') return false;
-    if ((window as any).Razorpay) return true;
-
-    await new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay checkout script.'));
-      document.body.appendChild(script);
-    });
-
-    return Boolean((window as any).Razorpay);
-  };
-
-  const collectRazorpayPayment = async (
-    orderId: string,
-    amount: number,
-    method: 'CARD' | 'UPI'
-  ): Promise<RazorpayPaymentResult> => {
-    const scriptLoaded = await loadRazorpayCheckout();
-    if (!scriptLoaded) {
-      throw new Error('Unable to load payment gateway.');
-    }
-
-    const orderResponse = await authFetch('/api/payments/razorpay-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId,
-        amount,
-        paymentMethod: method,
-      }),
-    });
-    const payload = (await orderResponse.json()) as RazorpayOrderPayload;
-    if (!payload.success || !payload.data) {
-      throw new Error(payload.error || 'Could not create payment order');
-    }
-
-    const RazorpayCtor = (window as any).Razorpay;
-    if (!RazorpayCtor) {
-      throw new Error('Payment gateway unavailable.');
-    }
-
-    return new Promise<RazorpayPaymentResult>((resolve, reject) => {
-      const options = {
-        key: payload.data?.keyId,
-        amount: payload.data?.amount,
-        currency: payload.data?.currency,
-        name: 'BAR-LOGIC',
-        description: `POS Order ${orderId}`,
-        order_id: payload.data?.razorpayOrderId,
-        handler: (response: { razorpay_payment_id?: string; razorpay_order_id?: string }) => {
-          if (response.razorpay_payment_id && response.razorpay_order_id) {
-            resolve({
-              paymentId: response.razorpay_payment_id,
-              razorpayOrderId: response.razorpay_order_id,
-            });
-            return;
-          }
-          reject(new Error('Payment was not completed.'));
-        },
-        modal: {
-          ondismiss: () => reject(new Error('Payment cancelled by user.')),
-        },
-        method:
-          method === 'UPI'
-            ? {
-                upi: true,
-                card: false,
-                netbanking: false,
-                wallet: false,
-                emi: false,
-                paylater: false,
-              }
-            : {
-                upi: false,
-                card: true,
-                netbanking: false,
-                wallet: false,
-                emi: false,
-                paylater: false,
-              },
-      };
-
-      const checkout = new RazorpayCtor(options);
-      checkout.open();
-    });
-  };
+  // Payment processing is intentionally disabled; this POS only records payment method.
 
   return (
     <div className="flex h-screen bg-slate-100 text-slate-900">

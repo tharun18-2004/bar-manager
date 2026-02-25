@@ -47,23 +47,6 @@ CREATE INDEX idx_void_logs_staff_name ON void_logs(staff_name);
 CREATE INDEX idx_void_logs_created_at ON void_logs(created_at);
 */
 
-// 4. PAYMENT_TRANSACTIONS Table - Payment/audit records
-/*
-CREATE TABLE payment_transactions (
-  id BIGSERIAL PRIMARY KEY,
-  order_id UUID,
-  external_order_id TEXT,
-  staff_name VARCHAR(255),
-  amount DECIMAL(10, 2),
-  stripe_id VARCHAR(255),
-  status VARCHAR(50),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_payment_transactions_external_order_id
-  ON payment_transactions(external_order_id);
-*/
-
 // Environment Variables to add to .env.local
 /*
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co

@@ -34,9 +34,9 @@ const auditRows = [
   {
     id: 8,
     actor_email: 'manager@example.test',
-    action: 'payment.create',
-    resource: 'payment_transactions',
-    resource_id: 'TXN-8',
+    action: 'order.create',
+    resource: 'orders',
+    resource_id: 'BAR-20260222-8',
     outcome: 'success',
     metadata: null,
     created_at: '2026-02-22T09:59:59.000Z',

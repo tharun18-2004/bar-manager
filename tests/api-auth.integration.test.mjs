@@ -223,17 +223,6 @@ test('POST /api/sales with staff token reaches request validation', async () => 
   assert.equal(payload.error, 'item_name is required');
 });
 
-test('GET /api/payments with staff token reaches request validation', async () => {
-  const response = await fetch(`${BASE_URL}/api/payments`, {
-    headers: { authorization: 'Bearer test-staff' },
-  });
-  const payload = await response.json();
-
-  assert.equal(response.status, 400);
-  assert.equal(payload.success, false);
-  assert.equal(payload.error, 'Missing orderId');
-});
-
 test('GET /api/voids returns 403 for staff role token', async () => {
   const response = await fetch(`${BASE_URL}/api/voids`, {
     headers: { authorization: 'Bearer test-staff' },
@@ -324,25 +313,6 @@ test('PUT /api/tables with staff token reaches request validation', async () => 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
   assert.equal(payload.error, 'status must be one of: available, occupied, needs_cleaning');
-});
-
-test('POST /api/payments with owner token reaches request validation', async () => {
-  const response = await fetch(`${BASE_URL}/api/payments`, {
-    method: 'POST',
-    headers: {
-      authorization: 'Bearer test-owner',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      orderId: 'ORDER-123',
-      amount: 100,
-    }),
-  });
-  const payload = await response.json();
-
-  assert.equal(response.status, 400);
-  assert.equal(payload.success, false);
-  assert.equal(payload.error, 'items must be a non-empty array');
 });
 
 test('GET /api/sales returns 401 for unknown bearer token', async () => {

@@ -31,7 +31,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ### Core Features
 - ✅ **POS System** - Complete point-of-sale with item search, order management, quantity control
 - ✅ **Void Transactions** - Track voided sales with reason logging for audit trails
-- ✅ **Payment Logging** - Free transaction recording with order/status tracking
+- ✅ **Payment Method Recording** - Store how each order was paid (CASH/CARD/UPI/COMPLIMENTARY) without processing payments
 - ✅ **Customer Tracking** - Manage customers, track spending, visit history
 - ✅ **Table Management** - Manage dining areas, track table status (available/occupied/reserved)
 - ✅ **Inventory Management** - Track stock levels, value calculations, low stock alerts
@@ -54,7 +54,6 @@ bar-manager/
 ├── app/
 │   ├── api/                 # API routes
 │   │   ├── sales/          # Sales endpoints
-│   │   ├── payments/       # Payment processing
 │   │   ├── inventory/      # Stock management
 │   │   ├── staff/          # Employee management
 │   │   ├── customers/      # Customer data
@@ -75,7 +74,6 @@ bar-manager/
 │   ├── Sidebar.tsx         # Navigation
 │   ├── StatCard.tsx        # Metrics display
 │   ├── VoidModal.tsx       # Void confirmation
-│   └── PaymentModal.tsx    # Payment processing
 ├── lib/
 │   ├── supabase.ts         # Supabase client
 │   ├── auth.ts             # Auth helpers
@@ -314,9 +312,9 @@ railway up
 - `GET /api/sales?staff=name` - Filter by staff (`staff/manager/owner`)
 - `GET /api/sales?voided=true` - Get voided sales (`staff/manager/owner`)
 
-### Payments API
-- `POST /api/payments` - Record transaction (`staff/manager/owner`)
-- `GET /api/payments?orderId=xxx` - Check payment status (`staff/manager/owner`)
+
+### Orders API
+- `POST /api/orders` - Complete order and record `payment_method` (`staff/manager/owner`)
 
 ### Inventory API
 - `GET /api/inventory` - Get all items (`staff/manager/owner`)
@@ -389,4 +387,7 @@ For issues and questions, please contact the development team.
 **Version**: 2.0.0  
 **Last Updated**: February 19, 2026  
 **Status**: Production Ready ✅
+
+
+
 
