@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import StatCard from '@/components/StatCard';
 import VoidModal from '@/components/VoidModal';
@@ -36,30 +36,29 @@ export default function EmployeePage() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
+  const fetchMenuItems = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/inventory');
+      const { data } = await res.json();
+      if (data) {
+        const formattedMenuItems = data.map((item: any) => ({
+          id: String(item.id),
+          name: item.item_name,
+          price: Number(item.unit_price),
+          category: item.category,
+          quantity: Number(item.quantity),
+        }));
+        setMenuItems(formattedMenuItems);
+      }
+    } catch (error) {
+      console.error('Failed to fetch menu items:', error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthorized) return;
-
-    const fetchMenuItems = async () => {
-      try {
-        const res = await authFetch('/api/inventory');
-        const { data } = await res.json();
-        if (data) {
-          const formattedMenuItems = data.map((item: any) => ({
-            id: String(item.id),
-            name: item.item_name,
-            price: Number(item.unit_price),
-            category: item.category,
-            quantity: Number(item.quantity),
-          }));
-          setMenuItems(formattedMenuItems);
-        }
-      } catch (error) {
-        console.error('Failed to fetch menu items:', error);
-      }
-    };
-
     void fetchMenuItems();
-  }, [isAuthorized]);
+  }, [fetchMenuItems, isAuthorized]);
 
   if (isChecking) {
     return <div className="min-h-screen bg-slate-100 text-slate-700 flex items-center justify-center">Checking access...</div>;
@@ -178,6 +177,7 @@ export default function EmployeePage() {
 
       setToast({ type: 'success', message: `Order placed. Total: $${totalPrice.toFixed(2)}` });
       setOrderItems([]);
+      await fetchMenuItems();
     } catch (error) {
       setToast({ type: 'error', message: `Failed to complete order: ${formatError(error)}` });
     } finally {
