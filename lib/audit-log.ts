@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 type AuditOutcome = 'success' | 'failure';
@@ -28,6 +29,27 @@ function nowIso() {
 function shouldPersistAuditToDb() {
   // Persist by default. Set AUDIT_LOG_TO_DB=0 only when explicitly disabling DB writes.
   return process.env.AUDIT_LOG_TO_DB !== '0';
+}
+
+let auditDbClient: SupabaseClient<any> | null = null;
+
+function getAuditDbClient(): SupabaseClient<any> {
+  if (auditDbClient) return auditDbClient;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  // Prefer service role for server-side audit writes so inserts are not blocked by RLS.
+  if (url && serviceRoleKey) {
+    auditDbClient = createClient(url, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    return auditDbClient;
+  }
+
+  // Fallback to shared client (may be anon key in some environments).
+  auditDbClient = supabase;
+  return auditDbClient;
 }
 
 function formatAuditEvent(input: AuditEventInput) {
@@ -64,7 +86,7 @@ export async function writeAuditEvent(input: AuditEventInput) {
       return;
     }
 
-    const { error } = await supabase.from('audit_logs').insert([
+    const { error } = await getAuditDbClient().from('audit_logs').insert([
       {
         request_id: event.requestId,
         actor_id: event.actorId,
@@ -89,6 +111,9 @@ export async function writeAuditEvent(input: AuditEventInput) {
           requestId: event.requestId,
           action: event.action,
           resource: event.resource,
+          code: (error as any).code ?? null,
+          details: (error as any).details ?? null,
+          hint: (error as any).hint ?? null,
           message: error.message,
         })
       );
