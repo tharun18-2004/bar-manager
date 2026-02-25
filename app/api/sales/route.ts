@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, parseDateRange, rangeStartIso, serverError } from '@/lib/api-response';
+import { writeAuditEvent } from '@/lib/audit-log';
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,6 +60,23 @@ export async function POST(req: NextRequest) {
 
       if (inventoryUpdateError) throw inventoryUpdateError;
     }
+
+    const saleRow = Array.isArray(data) ? data[0] : null;
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'sale.create',
+      resource: 'sales',
+      resourceId: saleRow?.id ?? null,
+      metadata: {
+        item_name: itemName,
+        amount: parsedAmount,
+        quantity: parsedQuantity,
+      },
+      after: saleRow,
+    });
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {

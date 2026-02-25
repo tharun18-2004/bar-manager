@@ -5,6 +5,20 @@ import { badRequest, serverError } from '@/lib/api-response';
 import { writeAuditEvent } from '@/lib/audit-log';
 
 const PAYMENT_METHODS = new Set(['CASH', 'CARD', 'UPI', 'COMPLIMENTARY']);
+type OrderRecord = {
+  id?: string | number;
+  order_id?: string;
+  total_amount?: number | string;
+  payment_method?: string | null;
+  [key: string]: unknown;
+};
+function isMissingCreatedByColumnError(error: unknown): boolean {
+  const message =
+    error && typeof error === 'object' && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : String(error ?? '');
+  return message.includes("Could not find the 'created_by' column");
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,22 +50,47 @@ export async function POST(req: NextRequest) {
       return badRequest('payment_method must be one of: CASH, CARD, UPI, COMPLIMENTARY');
     }
 
-    const { data, error } = await supabase
+    const payloadWithCreator = {
+      order_id: normalizedOrderId,
+      staff_name: auth.user.email ?? 'staff',
+      created_by: auth.user.id,
+      total_amount: parsedTotal,
+      payment_method: normalizedPaymentMethod,
+      items,
+      status: 'completed',
+    };
+    const payloadWithoutCreator = {
+      order_id: normalizedOrderId,
+      staff_name: auth.user.email ?? 'staff',
+      total_amount: parsedTotal,
+      payment_method: normalizedPaymentMethod,
+      items,
+      status: 'completed',
+    };
+
+    let orderData: OrderRecord | null = null;
+    const withCreatorResult = await supabase
       .from('orders')
-      .insert([
-        {
-          order_id: normalizedOrderId,
-          staff_name: auth.user.email ?? 'staff',
-          total_amount: parsedTotal,
-          payment_method: normalizedPaymentMethod,
-          items,
-          status: 'completed',
-        },
-      ])
+      .insert([payloadWithCreator])
       .select()
       .single();
 
-    if (error) throw error;
+    if (withCreatorResult.error) {
+      if (!isMissingCreatedByColumnError(withCreatorResult.error)) {
+        throw withCreatorResult.error;
+      }
+
+      const fallbackResult = await supabase
+        .from('orders')
+        .insert([payloadWithoutCreator])
+        .select()
+        .single();
+
+      if (fallbackResult.error) throw fallbackResult.error;
+      orderData = fallbackResult.data;
+    } else {
+      orderData = withCreatorResult.data;
+    }
 
     await writeAuditEvent({
       req,
@@ -60,16 +99,16 @@ export async function POST(req: NextRequest) {
       actorRole: auth.role,
       action: 'order.create',
       resource: 'orders',
-      resourceId: data.id ?? data.order_id ?? null,
+      resourceId: orderData?.id ?? orderData?.order_id ?? null,
       metadata: {
-        order_id: data.order_id,
-        total_amount: data.total_amount,
-        payment_method: data.payment_method,
+        order_id: orderData?.order_id ?? null,
+        total_amount: orderData?.total_amount ?? null,
+        payment_method: orderData?.payment_method ?? null,
       },
-      after: data,
+      after: orderData,
     });
 
-    return NextResponse.json({ success: true, data }, { status: 201 });
+    return NextResponse.json({ success: true, data: orderData }, { status: 201 });
   } catch (error) {
     return serverError(error, req);
   }
