@@ -118,7 +118,7 @@ test('POST /api/staff returns 403 for manager role token', async () => {
   assert.equal(payload.error, 'Forbidden');
 });
 
-test('POST /api/inventory with manager token reaches request validation', async () => {
+test('POST /api/inventory with manager token returns 403', async () => {
   const response = await fetch(`${BASE_URL}/api/inventory`, {
     method: 'POST',
     headers: {
@@ -133,9 +133,9 @@ test('POST /api/inventory with manager token reaches request validation', async 
   });
   const payload = await response.json();
 
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 403);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'item_name is required');
+  assert.equal(payload.error, 'Forbidden');
 });
 
 test('POST /api/staff with owner token reaches request validation', async () => {

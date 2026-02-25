@@ -11,7 +11,7 @@ type DashboardStats = {
   totalSalesToday: number;
   totalOrders: number;
   topSellingItem: string;
-  lowStockItems: number;
+  lowStockItems: number | null;
   topItems: Array<{ name: string; count: number; revenue: number }>;
 };
 
@@ -20,54 +20,41 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
-    totalSalesToday: 0,
-    totalOrders: 0,
-    topSellingItem: 'No sales yet',
-    lowStockItems: 0,
-    topItems: [],
+      totalSalesToday: 0,
+      totalOrders: 0,
+      topSellingItem: 'No sales yet',
+      lowStockItems: null,
+      topItems: [],
   });
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
-      const [salesRes, inventoryRes] = await Promise.all([
-        authFetch('/api/sales?range=today'),
-        authFetch('/api/inventory'),
-      ]);
-
-      const salesJson = await salesRes.json();
-      const inventoryJson = await inventoryRes.json();
-      const sales = Array.isArray(salesJson.data) ? salesJson.data.filter((s: any) => !s.is_voided) : [];
-      const inventory = Array.isArray(inventoryJson.data) ? inventoryJson.data : [];
-
-      const totalSalesToday = sales.reduce((sum: number, row: any) => sum + Number(row.amount), 0);
-      const totalOrders = sales.length;
-
-      const grouped = sales.reduce((acc: Record<string, { count: number; revenue: number }>, row: any) => {
-        const itemName = String(row.item_name || 'Unknown');
-        if (!acc[itemName]) acc[itemName] = { count: 0, revenue: 0 };
-        acc[itemName].count += 1;
-        acc[itemName].revenue += Number(row.amount);
-        return acc;
-      }, {});
-
-      const topItems = Object.entries(grouped as Record<string, { count: number; revenue: number }>)
-        .map(([name, value]) => ({ name, ...value }))
-        .sort((a, b) => b.count - a.count);
-
-      const lowStockItems = inventory.filter((item: any) => Number(item.quantity) <= 5).length;
+      const isOwner = role === 'owner';
+      const query = new URLSearchParams({
+        range: isOwner ? 'month' : 'today',
+        tz_offset: String(new Date().getTimezoneOffset()),
+      });
+      const res = await authFetch(`/api/dashboard-analytics?${query.toString()}`);
+      const payload = await res.json();
+      const data = payload.data || {};
+      const topItems = Array.isArray(data.topItems) ? data.topItems : [];
 
       setStats({
-        totalSalesToday,
-        totalOrders,
+        totalSalesToday: Number(data.totalSales ?? 0),
+        totalOrders: Number(data.totalOrders ?? 0),
         topSellingItem: topItems[0]?.name ?? 'No sales yet',
-        lowStockItems,
-        topItems: topItems.slice(0, 5),
+        lowStockItems: data.lowStockItems ?? null,
+        topItems: topItems.map((item: any) => ({
+          name: String(item.item_name ?? item.name ?? 'Unknown'),
+          count: Number(item.count ?? 0),
+          revenue: Number(item.revenue ?? 0),
+        })),
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -106,15 +93,25 @@ export default function DashboardPage() {
         <PageHeader title="Dashboard Analytics" role={role} />
         <main className="flex-1 p-8 overflow-y-auto">
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Total Sales Today" value={`$${stats.totalSalesToday.toFixed(2)}`} />
-            <StatCard label="Total Orders" value={stats.totalOrders} />
+            <StatCard label={role === 'owner' ? 'Total Sales (Month)' : 'Total Sales Today'} value={`$${stats.totalSalesToday.toFixed(2)}`} />
+            <StatCard label={role === 'owner' ? 'Total Orders (Month)' : 'Total Orders'} value={stats.totalOrders} />
             <StatCard label="Top Selling Item" value={stats.topSellingItem} />
-            <StatCard label="Low Stock Items" value={`${stats.lowStockItems} items`} type={stats.lowStockItems > 0 ? 'danger' : 'success'} />
+            <StatCard
+              label="Low Stock Items"
+              value={
+                role === 'owner'
+                  ? `${stats.lowStockItems ?? 0} items`
+                  : 'Owner only'
+              }
+              type={role === 'owner' && (stats.lowStockItems ?? 0) > 0 ? 'danger' : 'success'}
+            />
           </div>
 
           <section className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold text-slate-900">Top Items Today</h2>
+              <h2 className="text-xl font-bold text-slate-900">
+                {role === 'owner' ? 'Top Items (Month)' : 'Top Items Today'}
+              </h2>
               <button
                 type="button"
                 onClick={() => void handleDownloadPdf()}

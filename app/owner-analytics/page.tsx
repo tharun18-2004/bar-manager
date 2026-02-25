@@ -68,7 +68,10 @@ export default function OwnerAnalyticsPage() {
     setLoading(true);
     setErrorMessage(null);
     try {
-      const response = await authFetch('/api/owner-analytics');
+      const query = new URLSearchParams({
+        tz_offset: String(new Date().getTimezoneOffset()),
+      });
+      const response = await authFetch(`/api/owner-analytics?${query.toString()}`);
       const payload = await response.json();
       if (!payload.success) {
         throw new Error(typeof payload.error === 'string' ? payload.error : 'Failed to load analytics');

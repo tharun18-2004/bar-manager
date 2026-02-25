@@ -5,7 +5,7 @@ import { badRequest, serverError } from '@/lib/api-response';
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { data, error } = await supabase
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { item_name, category, quantity, unit_price } = await req.json();
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { id, quantity } = await req.json();

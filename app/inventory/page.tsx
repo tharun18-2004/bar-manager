@@ -19,7 +19,7 @@ interface InventoryItem {
 }
 
 export default function InventoryPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['manager', 'owner']);
+  const { isChecking, isAuthorized, role } = useRouteGuard(['owner']);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
