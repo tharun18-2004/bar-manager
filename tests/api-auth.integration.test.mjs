@@ -404,3 +404,23 @@ test('GET /api/audit with owner token validates date_from format', async () => {
   assert.equal(payload.success, false);
   assert.equal(payload.error, 'date_from must be YYYY-MM-DD');
 });
+
+test('GET /api/owner-analytics returns 401 when Authorization header is missing', async () => {
+  const response = await fetch(`${BASE_URL}/api/owner-analytics`);
+  const payload = await response.json();
+
+  assert.equal(response.status, 401);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'Missing bearer token');
+});
+
+test('GET /api/owner-analytics returns 403 for staff role token', async () => {
+  const response = await fetch(`${BASE_URL}/api/owner-analytics`, {
+    headers: { authorization: 'Bearer test-staff' },
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 403);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'Forbidden');
+});

@@ -15,10 +15,14 @@ function resolveRole(sessionRole?: unknown, userRole?: unknown): AppRole {
   return 'staff';
 }
 
-export function useRouteGuard(allowedRoles: AppRole[]) {
+export function useRouteGuard(
+  allowedRoles: AppRole[],
+  options?: { unauthorizedRedirect?: string }
+) {
   const router = useRouter();
   const pathname = usePathname();
   const allowedRolesKey = allowedRoles.join('|');
+  const unauthorizedRedirect = options?.unauthorizedRedirect ?? '/';
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [role, setRole] = useState<AppRole | null>(null);
@@ -46,7 +50,7 @@ export function useRouteGuard(allowedRoles: AppRole[]) {
           setIsAuthorized(false);
           setIsChecking(false);
         }
-        router.replace('/');
+        router.replace(unauthorizedRedirect);
         return;
       }
 
@@ -62,7 +66,7 @@ export function useRouteGuard(allowedRoles: AppRole[]) {
     return () => {
       mounted = false;
     };
-  }, [allowedRolesKey, pathname, router]);
+  }, [allowedRolesKey, pathname, router, unauthorizedRedirect]);
 
   return { isChecking, isAuthorized, role };
 }

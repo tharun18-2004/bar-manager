@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tables', label: 'Tables', roles: ['staff', 'manager', 'owner'] },
   { href: '/reports', label: 'Reports', roles: ['manager', 'owner'] },
   { href: '/inventory', label: 'Inventory', roles: ['manager', 'owner'] },
+  { href: '/owner-analytics', label: 'Owner Analytics', roles: ['owner'] },
   { href: '/owner/audit', label: 'Audit Logs', roles: ['owner'] },
 ];
 
