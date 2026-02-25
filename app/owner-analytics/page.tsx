@@ -45,6 +45,7 @@ type MonthlySalesRow = {
 type TopSellingItem = {
   item_id: string;
   total_quantity: number;
+  item_name: string | null;
 } | null;
 
 type OwnerAnalyticsPayload = {
@@ -176,8 +177,11 @@ export default function OwnerAnalyticsPage() {
                   <p className="text-slate-500">Loading...</p>
                 ) : analytics?.topSellingItem ? (
                   <div className="text-center">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Item ID</p>
-                    <p className="text-3xl font-black text-slate-900 mt-1">{analytics.topSellingItem.item_id}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Top Item</p>
+                    <p className="text-3xl font-black text-slate-900 mt-1">
+                      {analytics.topSellingItem.item_name || analytics.topSellingItem.item_id}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-2">ID: {analytics.topSellingItem.item_id}</p>
                     <p className="text-sm text-slate-500 mt-2">Total Quantity Sold</p>
                     <p className="text-2xl font-bold text-blue-700">{analytics.topSellingItem.total_quantity}</p>
                   </div>
