@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { supabase } from '@/lib/supabase';
 import { badRequest, serverError } from '@/lib/api-response';
+import { writeAuditEvent } from '@/lib/audit-log';
 
 const PAYMENT_METHODS = new Set(['CASH', 'CARD', 'UPI', 'COMPLIMENTARY']);
 
@@ -51,6 +52,22 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'order.create',
+      resource: 'orders',
+      resourceId: data.id ?? data.order_id ?? null,
+      metadata: {
+        order_id: data.order_id,
+        total_amount: data.total_amount,
+        payment_method: data.payment_method,
+      },
+      after: data,
+    });
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {

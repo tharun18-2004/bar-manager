@@ -17,6 +17,7 @@ type DashboardStats = {
 
 export default function DashboardPage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'manager', 'owner']);
+  const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -116,7 +117,7 @@ export default function DashboardPage() {
           ) : (
             <>
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-                <StatCard label="Total Sales (Month)" value={`$${stats.totalSalesToday.toFixed(2)}`} />
+                <StatCard label="Total Sales (Month)" value={inrFormatter.format(stats.totalSalesToday)} />
                 <StatCard label="Total Orders (Month)" value={stats.totalOrders} />
                 <StatCard label="Top Selling Item" value={stats.topSellingItem} />
                 <StatCard
@@ -150,7 +151,7 @@ export default function DashboardPage() {
                           {index + 1}. {item.name}
                         </p>
                         <p className="text-sm font-semibold text-slate-600">
-                          Sold {item.count} | ${item.revenue.toFixed(2)}
+                          Sold {item.count} | {inrFormatter.format(item.revenue)}
                         </p>
                       </div>
                     ))}

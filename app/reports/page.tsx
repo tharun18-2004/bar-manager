@@ -23,6 +23,7 @@ interface SalesData {
 
 export default function ReportsPage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
+  const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
   const [salesData, setSalesData] = useState<SalesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -156,9 +157,9 @@ export default function ReportsPage() {
           ) : salesData ? (
             <>
               <div className="grid grid-cols-4 gap-6 mb-8">
-                <StatCard label="Total Revenue" value={`$${salesData.total_revenue.toFixed(2)}`} />
+                <StatCard label="Total Revenue" value={inrFormatter.format(salesData.total_revenue)} />
                 <StatCard label="Transactions" value={salesData.total_transactions.toString()} />
-                <StatCard label="Avg. Transaction" value={`$${salesData.avg_transaction.toFixed(2)}`} />
+                <StatCard label="Avg. Transaction" value={inrFormatter.format(salesData.avg_transaction)} />
                 <StatCard label="Voided" value={salesData.total_voided.toString()} type="danger" />
               </div>
 
@@ -171,7 +172,7 @@ export default function ReportsPage() {
                         <span className="font-semibold text-slate-700">
                           {index + 1}. {item.name}
                         </span>
-                        <span className="text-blue-700 font-bold">${item.revenue.toFixed(2)}</span>
+                        <span className="text-blue-700 font-bold">{inrFormatter.format(item.revenue)}</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
                         <div

@@ -85,7 +85,11 @@ export async function GET(req: NextRequest) {
 
     let query = supabase.from('sales').select('*');
 
-    if (staff) query = query.eq('staff_name', staff);
+    if (auth.role !== 'owner') {
+      query = query.eq('staff_name', auth.user.email ?? 'staff');
+    } else if (staff) {
+      query = query.eq('staff_name', staff);
+    }
     if (voided !== null) query = query.eq('is_voided', voided === 'true');
     if (range) query = query.gte('created_at', rangeStartIso(range));
 

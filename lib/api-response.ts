@@ -70,8 +70,10 @@ export function rangeStartIso(range: DateRange): string {
     fromDate.setHours(0, 0, 0, 0);
   } else if (range === 'week') {
     fromDate.setDate(fromDate.getDate() - 7);
+    fromDate.setHours(0, 0, 0, 0);
   } else {
-    fromDate.setDate(fromDate.getDate() - 30);
+    fromDate.setDate(1);
+    fromDate.setHours(0, 0, 0, 0);
   }
 
   return fromDate.toISOString();

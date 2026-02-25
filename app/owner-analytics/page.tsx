@@ -60,6 +60,7 @@ const PAYMENT_COLORS = ['#2563eb', '#0891b2', '#16a34a', '#ea580c', '#a21caf'];
 
 export default function OwnerAnalyticsPage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
+  const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<OwnerAnalyticsPayload | null>(null);
@@ -123,7 +124,7 @@ export default function OwnerAnalyticsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
               label="Monthly Sales"
-              value={loading ? '...' : `$${(analytics?.monthlyOverview.total_sales ?? 0).toFixed(2)}`}
+              value={loading ? '...' : inrFormatter.format(analytics?.monthlyOverview.total_sales ?? 0)}
             />
             <StatCard
               label="Monthly Orders"
@@ -131,7 +132,7 @@ export default function OwnerAnalyticsPage() {
             />
             <StatCard
               label="Avg Order Value"
-              value={loading ? '...' : `$${(analytics?.monthlyOverview.average_order_value ?? 0).toFixed(2)}`}
+              value={loading ? '...' : inrFormatter.format(analytics?.monthlyOverview.average_order_value ?? 0)}
             />
           </div>
 
@@ -153,7 +154,7 @@ export default function OwnerAnalyticsPage() {
                         <Cell key={row.payment_method} fill={PAYMENT_COLORS[index % PAYMENT_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                    <Tooltip formatter={(value: number) => inrFormatter.format(Number(value))} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -167,7 +168,7 @@ export default function OwnerAnalyticsPage() {
                       />
                       {row.payment_method}
                     </span>
-                    <span className="font-semibold">${row.total_amount.toFixed(2)}</span>
+                    <span className="font-semibold">{inrFormatter.format(row.total_amount)}</span>
                   </div>
                 ))}
               </div>
@@ -203,7 +204,7 @@ export default function OwnerAnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="day" tick={{ fill: '#475569', fontSize: 12 }} />
                   <YAxis tick={{ fill: '#475569', fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                  <Tooltip formatter={(value: number) => inrFormatter.format(Number(value))} />
                   <Line type="monotone" dataKey="total_amount" stroke="#2563eb" strokeWidth={3} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -218,7 +219,7 @@ export default function OwnerAnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" tick={{ fill: '#475569', fontSize: 12 }} />
                   <YAxis tick={{ fill: '#475569', fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                  <Tooltip formatter={(value: number) => inrFormatter.format(Number(value))} />
                   <Bar dataKey="total_amount" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
