@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, serverError } from '@/lib/api-response';
+import { writeAuditEvent } from '@/lib/audit-log';
 
 export async function GET(req: NextRequest) {
   try {
@@ -57,6 +58,21 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'inventory.create',
+      resource: 'inventory',
+      resourceId: data?.[0]?.id ?? null,
+      outcome: 'success',
+      after: data?.[0] ?? null,
+      metadata: {
+        item_name: data?.[0]?.item_name ?? item_name.trim(),
+      },
+    });
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     return serverError(error, req);
@@ -94,6 +110,14 @@ export async function PUT(req: NextRequest) {
         ? parsedNumericId
         : String(normalizedId);
 
+    const { data: beforeRows, error: beforeError } = await supabase
+      .from('inventory')
+      .select('*')
+      .eq('id', targetId)
+      .limit(1);
+    if (beforeError) throw beforeError;
+    const beforeRecord = beforeRows?.[0] ?? null;
+
     const { data, error } = await supabase
       .from('inventory')
       .update({ quantity: parsedQuantity, updated_at: new Date() })
@@ -101,6 +125,22 @@ export async function PUT(req: NextRequest) {
       .select();
 
     if (error) throw error;
+
+    await writeAuditEvent({
+      req,
+      actorId: auth.user.id,
+      actorEmail: auth.user.email ?? null,
+      actorRole: auth.role,
+      action: 'inventory.update',
+      resource: 'inventory',
+      resourceId: targetId,
+      outcome: 'success',
+      before: beforeRecord,
+      after: data?.[0] ?? null,
+      metadata: {
+        updatedFields: ['quantity'],
+      },
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

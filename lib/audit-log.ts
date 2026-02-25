@@ -50,6 +50,7 @@ export async function writeAuditEvent(input: AuditEventInput) {
   const event = formatAuditEvent(input);
 
   try {
+    console.log("AUDIT ENV:", process.env.AUDIT_LOG_TO_DB);
     console.info(
       JSON.stringify({
         level: 'info',
@@ -62,6 +63,7 @@ export async function writeAuditEvent(input: AuditEventInput) {
       return;
     }
 
+    console.log("Audit insert triggered");
     const { error } = await supabase.from('audit_logs').insert([
       {
         request_id: event.requestId,
