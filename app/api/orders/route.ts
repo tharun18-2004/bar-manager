@@ -3,18 +3,22 @@ import { requireAuth } from '@/lib/api-auth';
 import { supabase } from '@/lib/supabase';
 import { badRequest, serverError } from '@/lib/api-response';
 
-const PAYMENT_METHODS = new Set(['cash', 'card', 'upi', 'complimentary']);
+const PAYMENT_METHODS = new Set(['CASH', 'CARD', 'UPI', 'COMPLIMENTARY']);
 
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
-    const { items, total, payment_method, order_id } = await req.json();
+    const { items, total, payment_method, paymentMethod, order_id } = await req.json();
     const parsedTotal = Number(total);
-    const normalizedPaymentMethod =
+    const rawPaymentMethod =
       typeof payment_method === 'string' && payment_method.trim().length > 0
-        ? payment_method.trim().toLowerCase()
+        ? payment_method
+        : paymentMethod;
+    const normalizedPaymentMethod =
+      typeof rawPaymentMethod === 'string' && rawPaymentMethod.trim().length > 0
+        ? rawPaymentMethod.trim().toUpperCase()
         : '';
     const normalizedOrderId =
       typeof order_id === 'string' && order_id.trim().length > 0
@@ -28,7 +32,7 @@ export async function POST(req: NextRequest) {
       return badRequest('total must be a positive number');
     }
     if (!PAYMENT_METHODS.has(normalizedPaymentMethod)) {
-      return badRequest('payment_method must be one of: cash, card, upi, complimentary');
+      return badRequest('payment_method must be one of: CASH, CARD, UPI, COMPLIMENTARY');
     }
 
     const { data, error } = await supabase

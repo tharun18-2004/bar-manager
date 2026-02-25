@@ -26,7 +26,7 @@ interface MenuItem {
   quantity: number;
 }
 
-type PaymentMethod = 'cash' | 'card' | 'upi' | 'complimentary';
+type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'COMPLIMENTARY';
 
 export default function EmployeePage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'manager', 'owner']);
@@ -35,7 +35,7 @@ export default function EmployeePage() {
   const [voidModal, setVoidModal] = useState(false);
   const [selectedItemToVoid, setSelectedItemToVoid] = useState<OrderItem | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
@@ -169,6 +169,7 @@ export default function EmployeePage() {
           })),
           total: totalPrice,
           payment_method: paymentMethod,
+          paymentMethod: paymentMethod,
         }),
       });
 
@@ -198,6 +199,7 @@ export default function EmployeePage() {
               unitPrice: item.price,
             })),
             paymentMethod,
+            payment_method: paymentMethod,
             staffName: 'Employee',
           }),
         });
@@ -328,7 +330,7 @@ export default function EmployeePage() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Payment Method</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['cash', 'card', 'upi', 'complimentary'] as const).map((method) => (
+                  {(['CASH', 'CARD', 'UPI', 'COMPLIMENTARY'] as const).map((method) => (
                     <button
                       key={method}
                       type="button"

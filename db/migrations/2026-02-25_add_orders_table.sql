@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   order_id text UNIQUE NOT NULL,
   staff_name text,
   total_amount numeric(10,2) NOT NULL,
-  payment_method text NOT NULL DEFAULT 'complimentary',
+  payment_method text NOT NULL DEFAULT 'COMPLIMENTARY',
   status text NOT NULL DEFAULT 'completed',
   items jsonb NOT NULL DEFAULT '[]'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -23,7 +23,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.orders
       ADD CONSTRAINT orders_payment_method_check
-      CHECK (payment_method IN ('cash', 'card', 'upi', 'complimentary'));
+      CHECK (payment_method IN ('CASH', 'CARD', 'UPI', 'COMPLIMENTARY'));
   END IF;
 END $$;
 

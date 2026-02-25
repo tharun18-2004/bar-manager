@@ -8,6 +8,7 @@ Run these SQL files in Supabase SQL Editor in this exact order:
 4. `db/migrations/2026-02-25_add_table_labels_and_order_reference.sql`
 5. `db/migrations/2026-02-25_add_payment_method_to_transactions.sql`
 6. `db/migrations/2026-02-25_add_orders_table.sql`
+7. `db/migrations/2026-02-25_normalize_orders_payment_method_uppercase.sql`
 
 ## Verify Migration Applied
 
