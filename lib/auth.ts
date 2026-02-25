@@ -1,12 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+function normalizeEnv(value: string | undefined) {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
-export const supabase = createClient(
+const supabaseUrl = normalizeEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabaseAnonKey = normalizeEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const hasAuthConfig = Boolean(supabaseUrl && supabaseAnonKey);
+
+const baseClient = createClient(
   supabaseUrl ?? 'https://placeholder.supabase.co',
   supabaseAnonKey ?? 'placeholder-anon-key'
 );
+
+function assertAuthConfig() {
+  if (!hasAuthConfig) {
+    throw new Error(
+      'Missing frontend Supabase config. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel Production env and redeploy.'
+    );
+  }
+}
+
+export const supabase = new Proxy(baseClient, {
+  get(target, prop, receiver) {
+    assertAuthConfig();
+    const value = Reflect.get(target, prop, receiver);
+    return typeof value === 'function' ? value.bind(target) : value;
+  },
+});
 
 // Auth helper functions
 export async function signUp(email: string, password: string, fullName: string) {
