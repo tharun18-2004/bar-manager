@@ -12,10 +12,14 @@ let mockServerPort;
 
 const mockState = {
   salesInserts: [],
+  inventoryRows: [{ id: 10, item_name: 'Beer Pint', quantity: 50 }],
+  inventoryUpdates: [],
 };
 
 function resetMockState() {
   mockState.salesInserts = [];
+  mockState.inventoryRows = [{ id: 10, item_name: 'Beer Pint', quantity: 50 }];
+  mockState.inventoryUpdates = [];
 }
 
 async function readJson(req) {
@@ -47,6 +51,31 @@ function startMockSupabaseServer() {
         }));
         mockState.salesInserts.push(...inserted);
         json(res, 201, inserted);
+        return;
+      }
+
+      if (reqUrl.pathname === '/rest/v1/inventory' && req.method === 'GET') {
+        const itemNameFilter = reqUrl.searchParams.get('item_name');
+        const itemName = itemNameFilter && itemNameFilter.startsWith('eq.') ? itemNameFilter.slice(3) : null;
+        const rows = itemName
+          ? mockState.inventoryRows.filter((row) => row.item_name === itemName)
+          : mockState.inventoryRows;
+        json(res, 200, rows.slice(0, 1));
+        return;
+      }
+
+      if (reqUrl.pathname === '/rest/v1/inventory' && req.method === 'PATCH') {
+        const body = await readJson(req);
+        const idFilter = reqUrl.searchParams.get('id');
+        const id = idFilter && idFilter.startsWith('eq.') ? Number(idFilter.slice(3)) : NaN;
+        const rowIndex = mockState.inventoryRows.findIndex((row) => row.id === id);
+        if (rowIndex >= 0) {
+          mockState.inventoryRows[rowIndex] = { ...mockState.inventoryRows[rowIndex], ...body };
+          mockState.inventoryUpdates.push(mockState.inventoryRows[rowIndex]);
+          json(res, 200, [mockState.inventoryRows[rowIndex]]);
+          return;
+        }
+        json(res, 200, []);
         return;
       }
 
@@ -92,6 +121,7 @@ test('POST /api/sales with staff token creates sales row for POS completion', as
     body: JSON.stringify({
       item_name: 'Beer Pint',
       amount: 6,
+      quantity: 1,
       staff_name: 'Manual Override',
     }),
   });
@@ -106,4 +136,6 @@ test('POST /api/sales with staff token creates sales row for POS completion', as
   assert.equal(mockState.salesInserts[0].amount, 6);
   assert.equal(mockState.salesInserts[0].is_voided, false);
   assert.equal(mockState.salesInserts[0].staff_name, 'staff@example.test');
+  assert.equal(mockState.inventoryUpdates.length, 1);
+  assert.equal(mockState.inventoryUpdates[0].quantity, 49);
 });

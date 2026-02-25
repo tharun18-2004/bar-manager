@@ -117,7 +117,6 @@ export default function EmployeePage() {
 
   const totalPrice = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-  const canAdjustInventory = role === 'manager' || role === 'owner';
 
   const handleDownloadInvoicePdf = async () => {
     if (orderItems.length === 0) {
@@ -158,21 +157,10 @@ export default function EmployeePage() {
           body: JSON.stringify({
             item_name: item.name,
             amount: item.price * item.quantity,
+            quantity: item.quantity,
             staff_name: 'Employee',
           }),
         });
-
-        if (canAdjustInventory) {
-          const currentInventoryItem = menuItems.find(menuItem => menuItem.id === item.id);
-          if (currentInventoryItem) {
-            const newQuantity = currentInventoryItem.quantity - item.quantity;
-            await authFetch('/api/inventory', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: item.id, quantity: newQuantity }),
-            });
-          }
-        }
       }
 
       setToast({ type: 'success', message: `Order placed. Total: $${totalPrice.toFixed(2)}` });
@@ -290,12 +278,6 @@ export default function EmployeePage() {
               <StatCard label="Items" value={totalItems.toString()} />
               <StatCard label="Total" value={`$${totalPrice.toFixed(2)}`} />
             </div>
-
-            {!canAdjustInventory && (
-              <p className="text-xs text-slate-500 mb-3">
-                Inventory updates require manager or owner permissions.
-              </p>
-            )}
 
             <div className="space-y-3">
               <button

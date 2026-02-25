@@ -8,8 +8,9 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
-    const { item_name, amount, staff_name } = await req.json();
+    const { item_name, amount, quantity, staff_name } = await req.json();
     const parsedAmount = Number(amount);
+    const parsedQuantity = quantity === undefined || quantity === null ? 1 : Number(quantity);
 
     if (!item_name || typeof item_name !== 'string' || item_name.trim().length === 0) {
       return badRequest('item_name is required');
@@ -17,12 +18,16 @@ export async function POST(req: NextRequest) {
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       return badRequest('amount must be a positive number');
     }
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
+      return badRequest('quantity must be a positive integer');
+    }
 
+    const itemName = item_name.trim();
     const { data, error } = await supabase
       .from('sales')
       .insert([
         {
-          item_name: item_name.trim(),
+          item_name: itemName,
           amount: parsedAmount,
           is_voided: false,
           staff_name: auth.user.email ?? staff_name ?? 'staff',
@@ -31,6 +36,29 @@ export async function POST(req: NextRequest) {
       .select();
 
     if (error) throw error;
+
+    const { data: inventoryRows, error: inventorySelectError } = await supabase
+      .from('inventory')
+      .select('id, quantity')
+      .eq('item_name', itemName)
+      .limit(1);
+
+    if (inventorySelectError) throw inventorySelectError;
+
+    const targetInventory = inventoryRows?.[0];
+    if (targetInventory && targetInventory.id !== undefined && targetInventory.id !== null) {
+      const currentQuantity = Number(targetInventory.quantity);
+      const nextQuantity = Number.isFinite(currentQuantity)
+        ? Math.max(0, currentQuantity - parsedQuantity)
+        : 0;
+
+      const { error: inventoryUpdateError } = await supabase
+        .from('inventory')
+        .update({ quantity: nextQuantity, updated_at: new Date().toISOString() })
+        .eq('id', targetInventory.id);
+
+      if (inventoryUpdateError) throw inventoryUpdateError;
+    }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
