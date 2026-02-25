@@ -20,6 +20,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', roles: ['staff', 'manager', 'owner'] },
   { href: '/employee', label: 'POS', roles: ['staff', 'manager', 'owner'] },
+  { href: '/tables', label: 'Tables', roles: ['staff', 'manager', 'owner'] },
   { href: '/reports', label: 'Reports', roles: ['manager', 'owner'] },
   { href: '/inventory', label: 'Inventory', roles: ['manager', 'owner'] },
   { href: '/owner/audit', label: 'Audit Logs', roles: ['owner'] },

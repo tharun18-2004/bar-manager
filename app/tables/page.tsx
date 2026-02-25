@@ -10,14 +10,29 @@ import { authFetch } from '@/lib/auth-fetch';
 import { formatError } from '@/lib/errors';
 import { useRouteGuard } from '@/lib/route-guard';
 
+type TableStatus = 'available' | 'occupied' | 'needs_cleaning' | 'reserved';
+
 interface Table {
   id: string;
-  table_number: number;
+  table_number: number | null;
+  table_label?: string | null;
   capacity: number;
-  status: 'available' | 'occupied' | 'reserved';
-  customer_name?: string;
-  order_amount?: number;
+  status: TableStatus;
+  customer_name?: string | null;
+  order_amount?: number | null;
+  order_reference?: string | null;
   created_at: string;
+}
+
+function normalizeStatus(status: TableStatus): 'available' | 'occupied' | 'needs_cleaning' {
+  if (status === 'reserved') return 'needs_cleaning';
+  return status;
+}
+
+function getDisplayLabel(table: Table) {
+  if (table.table_label && table.table_label.trim().length > 0) return table.table_label;
+  if (table.table_number !== null && table.table_number !== undefined) return `T${table.table_number}`;
+  return `Table-${table.id}`;
 }
 
 export default function TablesPage() {
@@ -26,18 +41,16 @@ export default function TablesPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-  const [reservationTarget, setReservationTarget] = useState<{
-    tableId: string;
-    status: 'occupied' | 'reserved';
-  } | null>(null);
+  const [occupancyTarget, setOccupancyTarget] = useState<{ tableId: string } | null>(null);
+  const [orderTarget, setOrderTarget] = useState<{ tableId: string } | null>(null);
 
   useEffect(() => {
     if (!isAuthorized) return;
-    fetchTables();
+    void fetchTables();
   }, [isAuthorized]);
 
   if (isChecking) {
-    return <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Checking access...</div>;
+    return <div className="min-h-screen bg-slate-100 text-slate-700 flex items-center justify-center">Checking access...</div>;
   }
 
   if (!isAuthorized) return null;
@@ -47,145 +60,178 @@ export default function TablesPage() {
       const res = await authFetch('/api/tables');
       const data = await res.json();
       if (!data.data || data.data.length === 0) {
-        const sampleTables = Array.from({ length: 12 }, (_, i) => ({
-          id: `${i + 1}`,
-          table_number: i + 1,
-          capacity: i % 3 === 0 ? 2 : i % 3 === 1 ? 4 : 6,
-          status: 'available' as const,
-          created_at: new Date().toISOString(),
-        }));
+        const sampleTables: Table[] = [
+          { id: '1', table_number: 1, table_label: 'T1', capacity: 2, status: 'available', created_at: new Date().toISOString() },
+          { id: '2', table_number: 2, table_label: 'T2', capacity: 4, status: 'occupied', customer_name: 'Walk-in', created_at: new Date().toISOString() },
+          { id: '3', table_number: 3, table_label: 'VIP1', capacity: 6, status: 'available', created_at: new Date().toISOString() },
+          { id: '4', table_number: 4, table_label: 'VIP2', capacity: 8, status: 'needs_cleaning', created_at: new Date().toISOString() },
+          { id: '5', table_number: 5, table_label: 'BAR', capacity: 6, status: 'available', created_at: new Date().toISOString() },
+        ];
         setTables(sampleTables);
       } else {
         setTables(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch tables:', error);
+      setToast({ type: 'error', message: `Failed to fetch tables: ${formatError(error)}` });
     } finally {
       setLoading(false);
     }
   };
 
-  const updateTableStatus = async (
+  const updateTable = async (
     tableId: string,
-    newStatus: 'available' | 'occupied' | 'reserved',
-    customerName?: string
+    payload: {
+      status: 'available' | 'occupied' | 'needs_cleaning';
+      customer_name?: string;
+      order_reference?: string;
+      order_amount?: number;
+    }
   ) => {
     try {
       await authFetch('/api/tables', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: tableId, status: newStatus, customer_name: customerName }),
+        body: JSON.stringify({ id: tableId, ...payload }),
       });
-      fetchTables();
+      await fetchTables();
+      setSelectedTable(null);
     } catch (error) {
       setToast({ type: 'error', message: `Failed to update table: ${formatError(error)}` });
     }
   };
 
-  const statusColors = {
-    available: 'bg-green-900 border-green-700 text-green-300',
-    occupied: 'bg-blue-900 border-blue-700 text-amber-200',
-    reserved: 'bg-yellow-900 border-yellow-700 text-yellow-300',
+  const statusColors: Record<'available' | 'occupied' | 'needs_cleaning', string> = {
+    available: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    occupied: 'bg-amber-50 border-amber-200 text-amber-800',
+    needs_cleaning: 'bg-rose-50 border-rose-200 text-rose-700',
   };
 
-  const statusBadge = {
-    available: 'A',
-    occupied: 'O',
-    reserved: 'R',
+  const statusEmoji: Record<'available' | 'occupied' | 'needs_cleaning', string> = {
+    available: '🟢',
+    occupied: '🟡',
+    needs_cleaning: '🔴',
   };
 
-  const occupiedTables = tables.filter((t) => t.status === 'occupied').length;
-  const reservedTables = tables.filter((t) => t.status === 'reserved').length;
-  const availableTables = tables.filter((t) => t.status === 'available').length;
+  const normalizedTables = tables.map((table) => ({
+    ...table,
+    status: normalizeStatus(table.status),
+  }));
+
+  const occupiedTables = normalizedTables.filter((t) => t.status === 'occupied').length;
+  const cleaningTables = normalizedTables.filter((t) => t.status === 'needs_cleaning').length;
+  const availableTables = normalizedTables.filter((t) => t.status === 'available').length;
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white">
+    <div className="flex h-screen bg-slate-100 text-slate-900">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      <div className="flex-1 flex flex-col">
-        <PageHeader title="TABLE MANAGEMENT" role={role} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <PageHeader title="Table Management" role={role} />
 
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-8 overflow-y-auto">
           <div className="grid grid-cols-3 gap-6 mb-8">
             <StatCard label="Available" value={availableTables.toString()} type="success" />
-            <StatCard label="Occupied" value={occupiedTables.toString()} type="default" />
-            <StatCard label="Reserved" value={reservedTables.toString()} type="danger" />
+            <StatCard label="Occupied" value={occupiedTables.toString()} />
+            <StatCard label="Needs Cleaning" value={cleaningTables.toString()} type="danger" />
           </div>
 
           {loading ? (
-            <p className="text-slate-400">Loading tables...</p>
+            <p className="text-slate-500">Loading tables...</p>
           ) : (
-            <div className="grid grid-cols-4 gap-4">
-              {tables.map((table) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {normalizedTables.map((table) => (
                 <button
                   key={table.id}
                   onClick={() => setSelectedTable(table)}
-                  className={`p-6 rounded-lg border-2 transition hover:scale-105 ${
-                    selectedTable?.id === table.id ? 'ring-2 ring-amber-400' : ''
+                  className={`p-5 rounded-2xl border-2 shadow-sm transition hover:-translate-y-0.5 ${
+                    selectedTable?.id === table.id ? 'ring-2 ring-blue-400' : ''
                   } ${statusColors[table.status]}`}
                 >
-                  <div className="text-3xl font-bold mb-2">{statusBadge[table.status]}</div>
-                  <p className="text-lg font-bold">Table {table.table_number}</p>
-                  <p className="text-xs opacity-75">Capacity: {table.capacity}</p>
-                  {table.customer_name && <p className="text-xs mt-2 truncate">{table.customer_name}</p>}
+                  <p className="text-3xl mb-1">{statusEmoji[table.status]}</p>
+                  <p className="text-lg font-black">{getDisplayLabel(table)}</p>
+                  <p className="text-xs opacity-80">Capacity: {table.capacity}</p>
+                  <p className="text-xs mt-2 capitalize">{table.status.replace('_', ' ')}</p>
+                  {table.customer_name && <p className="text-xs mt-1 truncate">Guest: {table.customer_name}</p>}
+                  {table.order_reference && <p className="text-xs mt-1 truncate">Order: {table.order_reference}</p>}
                 </button>
               ))}
             </div>
           )}
 
           {selectedTable && (
-            <div className="fixed bottom-6 right-6 bg-slate-900 border border-slate-800 rounded-lg p-6 w-96 shadow-2xl">
-              <h3 className="text-xl font-bold mb-4">Table {selectedTable.table_number}</h3>
+            <div className="fixed bottom-6 right-6 bg-white border border-slate-200 rounded-2xl p-6 w-96 shadow-xl">
+              <h3 className="text-xl font-black mb-4">{getDisplayLabel(selectedTable)}</h3>
 
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2 mb-6 text-sm">
                 <p>
-                  <span className="text-slate-300">Status:</span>{' '}
-                  <span className="font-bold capitalize">{selectedTable.status}</span>
+                  <span className="text-slate-500">Status:</span>{' '}
+                  <span className="font-bold capitalize">{normalizeStatus(selectedTable.status).replace('_', ' ')}</span>
                 </p>
                 <p>
-                  <span className="text-slate-300">Capacity:</span>{' '}
-                  <span className="font-bold">{selectedTable.capacity} people</span>
+                  <span className="text-slate-500">Capacity:</span>{' '}
+                  <span className="font-bold">{selectedTable.capacity} guests</span>
                 </p>
-                {selectedTable.order_amount && (
+                {selectedTable.customer_name && (
                   <p>
-                    <span className="text-slate-300">Order Total:</span>{' '}
-                    <span className="font-bold text-emerald-300">${selectedTable.order_amount.toFixed(2)}</span>
+                    <span className="text-slate-500">Guest:</span>{' '}
+                    <span className="font-bold">{selectedTable.customer_name}</span>
+                  </p>
+                )}
+                {selectedTable.order_reference && (
+                  <p>
+                    <span className="text-slate-500">Assigned Order:</span>{' '}
+                    <span className="font-bold">{selectedTable.order_reference}</span>
                   </p>
                 )}
               </div>
 
               <div className="space-y-2 mb-4">
-                {selectedTable.status === 'available' && (
+                {normalizeStatus(selectedTable.status) === 'available' && (
+                  <button
+                    onClick={() => setOccupancyTarget({ tableId: selectedTable.id })}
+                    className="w-full py-2 bg-amber-500 hover:bg-amber-400 rounded-xl font-bold transition"
+                  >
+                    Mark Occupied
+                  </button>
+                )}
+
+                {normalizeStatus(selectedTable.status) === 'occupied' && (
                   <>
                     <button
-                      onClick={() => setReservationTarget({ tableId: selectedTable.id, status: 'occupied' })}
-                      className="w-full py-2 bg-amber-500 hover:bg-amber-400 rounded font-bold transition"
+                      onClick={() => setOrderTarget({ tableId: selectedTable.id })}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition"
                     >
-                      Mark Occupied
+                      Assign / Update Order
                     </button>
                     <button
-                      onClick={() => setReservationTarget({ tableId: selectedTable.id, status: 'reserved' })}
-                      className="w-full py-2 bg-amber-500 hover:bg-amber-400 rounded font-bold transition"
+                      onClick={() => void updateTable(selectedTable.id, { status: 'needs_cleaning' })}
+                      className="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition"
                     >
-                      Make Reservation
+                      Mark Needs Cleaning
+                    </button>
+                    <button
+                      onClick={() => void updateTable(selectedTable.id, { status: 'available' })}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition"
+                    >
+                      Close Table
                     </button>
                   </>
                 )}
 
-                {selectedTable.status !== 'available' && (
+                {normalizeStatus(selectedTable.status) === 'needs_cleaning' && (
                   <button
-                    onClick={() => updateTableStatus(selectedTable.id, 'available')}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-bold transition"
+                    onClick={() => void updateTable(selectedTable.id, { status: 'available' })}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition"
                   >
-                    Mark Available
+                    Mark Clean / Available
                   </button>
                 )}
               </div>
 
               <button
                 onClick={() => setSelectedTable(null)}
-                className="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded font-bold transition"
+                className="w-full py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold transition"
               >
                 Close
               </button>
@@ -195,16 +241,31 @@ export default function TablesPage() {
       </div>
 
       <TextPromptModal
-        isOpen={Boolean(reservationTarget)}
-        title={reservationTarget?.status === 'reserved' ? 'Create Reservation' : 'Mark Table Occupied'}
+        isOpen={Boolean(occupancyTarget)}
+        title="Mark Table Occupied"
         label="Customer Name"
         placeholder="Enter customer name"
         confirmLabel="Save"
-        onCancel={() => setReservationTarget(null)}
+        onCancel={() => setOccupancyTarget(null)}
         onConfirm={(name) => {
-          if (reservationTarget) {
-            void updateTableStatus(reservationTarget.tableId, reservationTarget.status, name);
-            setReservationTarget(null);
+          if (occupancyTarget) {
+            void updateTable(occupancyTarget.tableId, { status: 'occupied', customer_name: name });
+            setOccupancyTarget(null);
+          }
+        }}
+      />
+
+      <TextPromptModal
+        isOpen={Boolean(orderTarget)}
+        title="Assign Order To Table"
+        label="Order Reference"
+        placeholder="e.g. BAR-2026-0001"
+        confirmLabel="Assign"
+        onCancel={() => setOrderTarget(null)}
+        onConfirm={(orderReference) => {
+          if (orderTarget) {
+            void updateTable(orderTarget.tableId, { status: 'occupied', order_reference: orderReference });
+            setOrderTarget(null);
           }
         }}
       />

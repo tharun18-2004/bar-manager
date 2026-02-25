@@ -323,7 +323,7 @@ test('PUT /api/tables with staff token reaches request validation', async () => 
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'status must be one of: available, occupied, reserved');
+  assert.equal(payload.error, 'status must be one of: available, occupied, needs_cleaning');
 });
 
 test('POST /api/payments with owner token reaches request validation', async () => {
