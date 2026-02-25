@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getCurrentUser, signIn, signUp } from '@/lib/auth';
+import { getCurrentUser, getSession, signIn, signUp } from '@/lib/auth';
 import { Suspense } from 'react';
 
 function resolveNextPath(nextValue: string | null): string {
@@ -22,6 +22,49 @@ function resolveRole(rawRole: unknown): 'staff' | 'manager' | 'owner' {
 
 function defaultPathForRole(role: 'staff' | 'manager' | 'owner') {
   return '/dashboard';
+}
+
+async function resolveEffectiveRoleFromServer(accessToken: string): Promise<'staff' | 'manager' | 'owner' | null> {
+  try {
+    const response = await fetch('/api/auth-context', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'x-request-id': crypto.randomUUID(),
+      },
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const role = payload?.data?.role;
+    if (role === 'owner' || role === 'manager' || role === 'staff') {
+      return role;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function authConnectivityHint() {
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
+
+  if (!url) {
+    return 'NEXT_PUBLIC_SUPABASE_URL is missing in deployment env.';
+  }
+
+  if (!url.startsWith('https://')) {
+    return `NEXT_PUBLIC_SUPABASE_URL must start with https:// (current: ${url}).`;
+  }
+
+  try {
+    const host = new URL(url).host;
+    if (!host.endsWith('.supabase.co')) {
+      return `Supabase URL host must end with .supabase.co (current host: ${host}).`;
+    }
+    return `Could not reach Supabase Auth at ${host}. Check project status and anon key.`;
+  } catch {
+    return `NEXT_PUBLIC_SUPABASE_URL is invalid: ${url}`;
+  }
 }
 
 function AuthPageContent() {
@@ -50,7 +93,12 @@ function AuthPageContent() {
         const user = await getCurrentUser();
         const appRole = resolveRole(user?.app_metadata?.role);
         const profileRole = resolveRole(user?.user_metadata?.role);
-        const effectiveRole = appRole === 'owner' || profileRole === 'owner' ? 'owner' : appRole;
+        const session = await getSession();
+        const roleFromServer = session?.access_token
+          ? await resolveEffectiveRoleFromServer(session.access_token)
+          : null;
+        const metadataRole = appRole === 'owner' || profileRole === 'owner' ? 'owner' : appRole;
+        const effectiveRole = roleFromServer ?? metadataRole;
 
         const requestedNext = searchParams.get('next');
         const selectedPath = '/dashboard';
@@ -80,7 +128,7 @@ function AuthPageContent() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.toLowerCase().includes('failed to fetch')) {
-        setError('Cannot reach authentication server. Check Supabase URL/key in Vercel env and redeploy.');
+        setError(`Cannot reach authentication server. ${authConnectivityHint()}`);
       } else {
         setError(message || 'Authentication failed');
       }

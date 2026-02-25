@@ -43,7 +43,26 @@ export function useRouteGuard(
         return;
       }
 
-      const resolvedRole = resolveRole(session.user.app_metadata?.role, session.user.user_metadata?.role);
+      const fallbackRole = resolveRole(session.user.app_metadata?.role, session.user.user_metadata?.role);
+      let resolvedRole = fallbackRole;
+      try {
+        const authContextRes = await fetch('/api/auth-context', {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'x-request-id': crypto.randomUUID(),
+          },
+        });
+        if (authContextRes.ok) {
+          const payload = await authContextRes.json();
+          const roleFromApi = payload?.data?.role;
+          if (roleFromApi === 'owner' || roleFromApi === 'manager' || roleFromApi === 'staff') {
+            resolvedRole = roleFromApi;
+          }
+        }
+      } catch {
+        resolvedRole = fallbackRole;
+      }
+
       if (!allowedRolesKey.split('|').includes(resolvedRole)) {
         if (mounted) {
           setRole(resolvedRole);

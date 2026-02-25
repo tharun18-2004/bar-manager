@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, User } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase';
 
 export type AppRole = 'staff' | 'manager' | 'owner';
 
@@ -17,6 +18,26 @@ function resolveRole(user: User): AppRole {
   const userRole = user.user_metadata?.role;
   const rawRole = typeof appRole === 'string' ? appRole : typeof userRole === 'string' ? userRole : 'staff';
   return rawRole === 'owner' || rawRole === 'manager' ? rawRole : 'staff';
+}
+
+async function resolveRoleFromUsersTable(userId: string): Promise<AppRole | null> {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    const dbRole = typeof data.role === 'string' ? data.role.trim().toLowerCase() : '';
+    if (dbRole === 'owner') return 'owner';
+    if (dbRole === 'manager') return 'manager';
+    if (dbRole === 'staff') return 'staff';
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function unauthorized(message: string) {
@@ -85,7 +106,9 @@ export async function requireAuth(
     return unauthorized('Invalid or expired token');
   }
 
-  const role = resolveRole(data.user);
+  const metadataRole = resolveRole(data.user);
+  const dbRole = await resolveRoleFromUsersTable(data.user.id);
+  const role = dbRole ?? metadataRole;
   if (allowedRoles && !allowedRoles.includes(role)) {
     return forbidden();
   }
