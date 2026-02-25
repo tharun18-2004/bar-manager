@@ -44,10 +44,10 @@ export default function DashboardPage() {
           counts.set(name, (counts.get(name) ?? 0) + 1);
         }
         let topItem = 'No sales yet';
-        for (const [name, count] of counts.entries()) {
+        counts.forEach((count, name) => {
           const currentBest = counts.get(topItem) ?? -1;
           if (count > currentBest) topItem = name;
-        }
+        });
 
         setStats({
           totalSalesToday: Number(totalSales.toFixed(2)),
