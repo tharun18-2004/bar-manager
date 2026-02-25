@@ -69,20 +69,35 @@ export async function PUT(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const { id, quantity } = await req.json();
-    const parsedId = Number(id);
+    const normalizedId =
+      typeof id === 'number'
+        ? id
+        : typeof id === 'string'
+          ? id.trim()
+          : '';
+    const parsedNumericId =
+      typeof normalizedId === 'number' ? normalizedId : Number(normalizedId);
     const parsedQuantity = Number(quantity);
 
-    if (!Number.isInteger(parsedId) || parsedId <= 0) {
-      return badRequest('id must be a positive integer');
+    if (
+      (typeof normalizedId === 'number' && (!Number.isInteger(normalizedId) || normalizedId <= 0)) ||
+      (typeof normalizedId === 'string' && normalizedId.length === 0)
+    ) {
+      return badRequest('id is required');
     }
     if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
       return badRequest('quantity must be a non-negative number');
     }
 
+    const targetId =
+      Number.isInteger(parsedNumericId) && parsedNumericId > 0
+        ? parsedNumericId
+        : String(normalizedId);
+
     const { data, error } = await supabase
       .from('inventory')
       .update({ quantity: parsedQuantity, updated_at: new Date() })
-      .eq('id', parsedId)
+      .eq('id', targetId)
       .select();
 
     if (error) throw error;
