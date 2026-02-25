@@ -30,14 +30,35 @@ export default function DashboardPage() {
 
   const fetchStats = useCallback(async () => {
     if (role !== 'owner') {
-      setStats({
-        totalSalesToday: 0,
-        totalOrders: 0,
-        topSellingItem: 'Owner only',
-        lowStockItems: null,
-        topItems: [],
-      });
-      setLoading(false);
+      setLoading(true);
+      try {
+        const res = await authFetch('/api/sales?range=today');
+        const payload = await res.json();
+        const rows = Array.isArray(payload.data) ? payload.data : [];
+        const nonVoided = rows.filter((row: any) => !row.is_voided);
+        const totalSales = nonVoided.reduce((sum: number, row: any) => sum + Number(row.amount ?? 0), 0);
+        const totalOrders = nonVoided.length;
+        const counts = new Map<string, number>();
+        for (const row of nonVoided) {
+          const name = String(row.item_name ?? 'Unknown');
+          counts.set(name, (counts.get(name) ?? 0) + 1);
+        }
+        let topItem = 'No sales yet';
+        for (const [name, count] of counts.entries()) {
+          const currentBest = counts.get(topItem) ?? -1;
+          if (count > currentBest) topItem = name;
+        }
+
+        setStats({
+          totalSalesToday: Number(totalSales.toFixed(2)),
+          totalOrders,
+          topSellingItem: topItem,
+          lowStockItems: null,
+          topItems: [],
+        });
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -55,7 +76,7 @@ export default function DashboardPage() {
       setStats({
         totalSalesToday: Number(data.totalSales ?? 0),
         totalOrders: Number(data.totalOrders ?? 0),
-        topSellingItem: topItems[0]?.name ?? 'No sales yet',
+        topSellingItem: String(topItems[0]?.item_name ?? topItems[0]?.name ?? 'No sales yet'),
         lowStockItems: data.lowStockItems ?? null,
         topItems: topItems.map((item: any) => ({
           name: String(item.item_name ?? item.name ?? 'Unknown'),
@@ -108,12 +129,19 @@ export default function DashboardPage() {
         <PageHeader title={role === 'owner' ? 'Dashboard Analytics' : 'Staff Dashboard'} role={role} />
         <main className="flex-1 p-8 overflow-y-auto">
           {role !== 'owner' ? (
-            <section className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-3">Operational Access</h2>
-              <p className="text-slate-600">
-                Staff accounts can use POS and Tables. Revenue analytics, inventory, reports, and audit logs are owner-only.
-              </p>
-            </section>
+            <>
+              <div className="grid gap-5 md:grid-cols-3">
+                <StatCard label="Today Sales" value={inrFormatter.format(stats.totalSalesToday)} />
+                <StatCard label="Today Orders" value={stats.totalOrders} />
+                <StatCard label="Top Item (Today)" value={stats.topSellingItem} />
+              </div>
+              <section className="mt-8 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+                <h2 className="text-xl font-bold text-slate-900 mb-3">Operational Access</h2>
+                <p className="text-slate-600">
+                  Staff accounts can use POS and Tables. Revenue analytics, inventory, reports, and audit logs are owner-only.
+                </p>
+              </section>
+            </>
           ) : (
             <>
               <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">

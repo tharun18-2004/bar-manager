@@ -34,7 +34,7 @@ const MAX_LIMIT = 200;
 
 interface AuditCursor {
   created_at: string;
-  id: number;
+  id: string;
 }
 
 interface AuditPageMeta {
@@ -51,10 +51,16 @@ function decodeCursor(rawCursor: string): AuditCursor | null {
   try {
     const decoded = Buffer.from(rawCursor, 'base64url').toString('utf8');
     const parsed = JSON.parse(decoded) as Partial<AuditCursor>;
-    if (!parsed || typeof parsed.created_at !== 'string' || typeof parsed.id !== 'number') {
+    if (!parsed || typeof parsed.created_at !== 'string') {
       return null;
     }
-    if (!Number.isInteger(parsed.id) || parsed.id <= 0) {
+    const parsedId =
+      typeof parsed.id === 'number'
+        ? String(parsed.id)
+        : typeof parsed.id === 'string'
+          ? parsed.id.trim()
+          : '';
+    if (!/^\d+$/.test(parsedId)) {
       return null;
     }
     if (Number.isNaN(Date.parse(parsed.created_at))) {
@@ -62,7 +68,7 @@ function decodeCursor(rawCursor: string): AuditCursor | null {
     }
     return {
       created_at: parsed.created_at,
-      id: parsed.id,
+      id: parsedId,
     };
   } catch {
     return null;
@@ -145,11 +151,17 @@ export async function GET(req: NextRequest) {
     const hasMore = rows.length > limit;
     const pageData = hasMore ? rows.slice(0, limit) : rows;
     const lastRow = pageData[pageData.length - 1] as
-      | { created_at?: string; id?: number }
+      | { created_at?: string; id?: string | number }
       | undefined;
+    const lastRowId =
+      typeof lastRow?.id === 'number'
+        ? String(lastRow.id)
+        : typeof lastRow?.id === 'string'
+          ? lastRow.id.trim()
+          : '';
     const nextCursor =
-      hasMore && lastRow && typeof lastRow.created_at === 'string' && typeof lastRow.id === 'number'
-        ? encodeCursor({ created_at: lastRow.created_at, id: lastRow.id })
+      hasMore && lastRow && typeof lastRow.created_at === 'string' && /^\d+$/.test(lastRowId)
+        ? encodeCursor({ created_at: lastRow.created_at, id: lastRowId })
         : null;
 
     return NextResponse.json({

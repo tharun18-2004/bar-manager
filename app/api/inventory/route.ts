@@ -6,7 +6,7 @@ import { writeAuditEvent } from '@/lib/audit-log';
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['owner']);
+    const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { data, error } = await supabase

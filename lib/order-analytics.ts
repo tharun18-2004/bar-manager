@@ -11,6 +11,21 @@ export type TopItem = {
   revenue: number;
 };
 
+function normalizeOrderItems(items: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(items)) {
+    return items as Array<Record<string, unknown>>;
+  }
+  if (typeof items === 'string') {
+    try {
+      const parsed = JSON.parse(items);
+      return Array.isArray(parsed) ? (parsed as Array<Record<string, unknown>>) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function clampTimezoneOffset(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(-840, Math.min(840, Math.trunc(value)));
@@ -92,7 +107,7 @@ export function aggregateTopItemsFromOrders(orders: OrderAnalyticsRow[]): TopIte
 
   for (const order of orders) {
     const orderAmount = asNumber(order.total_amount);
-    const itemRows = Array.isArray(order.items) ? (order.items as Array<Record<string, unknown>>) : [];
+    const itemRows = normalizeOrderItems(order.items);
     for (const item of itemRows) {
       const itemId = String(item.item_id ?? item.id ?? item.name ?? 'unknown');
       const itemName = String(item.name ?? item.item_name ?? itemId);
@@ -144,4 +159,3 @@ export function aggregateMonthlyRevenue(
     total_amount: Number(total_amount.toFixed(2)),
   }));
 }
-

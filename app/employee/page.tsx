@@ -32,6 +32,7 @@ type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'COMPLIMENTARY';
 
 export default function EmployeePage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'manager', 'owner']);
+  const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [voidModal, setVoidModal] = useState(false);
@@ -189,7 +190,7 @@ export default function EmployeePage() {
         });
       }
 
-      setToast({ type: 'success', message: `Order placed. Total: $${totalPrice.toFixed(2)}` });
+      setToast({ type: 'success', message: `Order placed. Total: ${inrFormatter.format(totalPrice)}` });
       setOrderItems([]);
       await fetchMenuItems();
     } catch (error) {
@@ -232,7 +233,7 @@ export default function EmployeePage() {
                   </div>
                   <p className="font-bold text-lg text-slate-900">{item.name}</p>
                   <p className="text-slate-500 text-sm">{item.category}</p>
-                  <p className="text-blue-700 font-bold mt-2">${item.price.toFixed(2)}</p>
+                  <p className="text-blue-700 font-bold mt-2">{inrFormatter.format(item.price)}</p>
                   <p className={`text-xs mt-1 ${item.quantity <= 0 ? 'text-rose-500' : 'text-slate-500'}`}>
                     {item.quantity <= 0 ? 'Out of stock' : `${item.quantity} in stock`}
                   </p>
@@ -269,7 +270,7 @@ export default function EmployeePage() {
                     >
                       <div className="flex-1">
                         <p className="font-semibold text-slate-800">{item.name}</p>
-                        <p className="text-slate-500 text-sm">${item.price.toFixed(2)} each</p>
+                        <p className="text-slate-500 text-sm">{inrFormatter.format(item.price)} each</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -286,9 +287,7 @@ export default function EmployeePage() {
                           +
                         </button>
                       </div>
-                      <p className="w-16 text-right font-bold text-blue-700">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </p>
+                      <p className="w-16 text-right font-bold text-blue-700">{inrFormatter.format(item.price * item.quantity)}</p>
                       <button
                         onClick={() => openVoidModal(item)}
                         className="ml-2 px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded text-xs font-bold opacity-0 group-hover:opacity-100 transition"
@@ -304,7 +303,7 @@ export default function EmployeePage() {
 
             <div className="grid grid-cols-2 gap-3 mb-6">
               <StatCard label="Items" value={totalItems.toString()} />
-              <StatCard label="Total" value={`$${totalPrice.toFixed(2)}`} />
+              <StatCard label="Total" value={inrFormatter.format(totalPrice)} />
             </div>
 
             <div className="space-y-3">

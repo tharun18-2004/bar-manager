@@ -20,6 +20,7 @@ interface InventoryItem {
 
 export default function InventoryPage() {
   const { isChecking, isAuthorized, role } = useRouteGuard(['owner'], { unauthorizedRedirect: '/pos' });
+  const inrFormatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -97,7 +98,7 @@ export default function InventoryPage() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 mb-8">
             <StatCard label="Total Items" value={inventory.length.toString()} />
-            <StatCard label="Inventory Value" value={`$${totalValue.toFixed(2)}`} />
+            <StatCard label="Inventory Value" value={inrFormatter.format(totalValue)} />
             <StatCard label="Low Stock" value={lowStockItems.toString()} type="danger" />
           </div>
 
@@ -196,9 +197,9 @@ export default function InventoryPage() {
                           {item.quantity}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-right">${item.unit_price.toFixed(2)}</td>
+                      <td className="px-6 py-3 text-right">{inrFormatter.format(item.unit_price)}</td>
                       <td className="px-6 py-3 text-right font-bold text-emerald-300">
-                        ${(item.quantity * item.unit_price).toFixed(2)}
+                        {inrFormatter.format(item.quantity * item.unit_price)}
                       </td>
                       <td className="px-6 py-3 text-center">
                         <div className="flex gap-2 justify-center">
