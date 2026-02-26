@@ -22,8 +22,11 @@ interface MenuItem {
   id: string;
   name: string;
   price: number;
+  bottleSizeMl: number;
+  currentStockMl: number;
+  pegSizeMl: number;
+  availablePegs: number;
   category: string;
-  quantity: number;
 }
 
 type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'COMPLIMENTARY';
@@ -50,9 +53,14 @@ export default function EmployeePage() {
         const formattedMenuItems = data.map((item: any) => ({
           id: String(item.id),
           name: item.item_name,
-          price: Number(item.unit_price),
+          price: Number(item.selling_price ?? item.unit_price ?? 0),
+          bottleSizeMl: Number(item.bottle_size_ml ?? 750),
+          currentStockMl: Number(item.current_stock_ml ?? (Number(item.stock_quantity ?? item.quantity ?? 0) * Number(item.bottle_size_ml ?? 750))),
+          pegSizeMl: 60,
+          availablePegs: Math.floor(
+            Number(item.current_stock_ml ?? (Number(item.stock_quantity ?? item.quantity ?? 0) * Number(item.bottle_size_ml ?? 750))) / 60
+          ),
           category: item.category,
-          quantity: Number(item.quantity),
         }));
         setMenuItems(formattedMenuItems);
       }
@@ -77,8 +85,13 @@ export default function EmployeePage() {
   );
 
   const addToOrder = (item: MenuItem) => {
+    if (item.availablePegs <= 0) {
+      setToast({ type: 'info', message: `${item.name} is out of stock.` });
+      return;
+    }
     setOrderItems((prev) => {
-      const { nextItems, message } = addItemToOrder(prev, item);
+      const adaptedItemForLimit = { ...item, quantity: item.availablePegs };
+      const { nextItems, message } = addItemToOrder(prev, adaptedItemForLimit);
       if (message) {
         setToast({ type: 'info', message });
       }
@@ -91,8 +104,15 @@ export default function EmployeePage() {
   };
 
   const updateQuantity = (id: string, quantity: number) => {
+    const menuItem = menuItems.find((item) => item.id === id);
+    const maxAllowed = menuItem?.availablePegs ?? 0;
     if (quantity <= 0) {
       removeFromOrder(id);
+    } else if (maxAllowed > 0 && quantity > maxAllowed) {
+      setToast({ type: 'info', message: `Only ${maxAllowed} pegs available.` });
+      setOrderItems(orderItems.map(item =>
+        item.id === id ? { ...item, quantity: maxAllowed } : item
+      ));
     } else {
       setOrderItems(orderItems.map(item =>
         item.id === id ? { ...item, quantity } : item
@@ -169,6 +189,7 @@ export default function EmployeePage() {
             name: item.name,
             quantity: item.quantity,
             unit_price: item.price,
+            peg_size_ml: 60,
             line_total: Number((item.price * item.quantity).toFixed(2)),
           })),
           total: totalPrice,
@@ -183,8 +204,10 @@ export default function EmployeePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             item_name: item.name,
+            item_id: item.id,
             amount: item.price * item.quantity,
             quantity: item.quantity,
+            peg_size_ml: 60,
             staff_name: 'Employee',
           }),
         });
@@ -234,13 +257,13 @@ export default function EmployeePage() {
                   <p className="font-bold text-lg text-slate-900">{item.name}</p>
                   <p className="text-slate-500 text-sm">{item.category}</p>
                   <p className="text-blue-700 font-bold mt-2">{inrFormatter.format(item.price)}</p>
-                  <p className={`text-xs mt-1 ${item.quantity <= 0 ? 'text-rose-500' : 'text-slate-500'}`}>
-                    {item.quantity <= 0 ? 'Out of stock' : `${item.quantity} in stock`}
+                  <p className={`text-xs mt-1 ${item.availablePegs <= 0 ? 'text-rose-500' : 'text-slate-500'}`}>
+                    {item.availablePegs <= 0 ? 'Out of stock' : `${item.currentStockMl} ml (${item.availablePegs} pegs)`}
                   </p>
                   <button
                     type="button"
                     onClick={() => addToOrder(item)}
-                    disabled={item.quantity <= 0}
+                    disabled={item.availablePegs <= 0}
                     className="mt-4 w-full rounded-xl bg-blue-600 text-white font-semibold py-2 hover:bg-blue-500 disabled:bg-slate-300 disabled:text-slate-600"
                   >
                     Add to cart

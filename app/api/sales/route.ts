@@ -9,9 +9,10 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
-    const { item_name, amount, quantity, staff_name } = await req.json();
+    const { item_name, amount, quantity, peg_size_ml, item_id, staff_name } = await req.json();
     const parsedAmount = Number(amount);
     const parsedQuantity = quantity === undefined || quantity === null ? 1 : Number(quantity);
+    const parsedPegSizeMl = peg_size_ml === undefined || peg_size_ml === null ? 60 : Number(peg_size_ml);
 
     if (!item_name || typeof item_name !== 'string' || item_name.trim().length === 0) {
       return badRequest('item_name is required');
@@ -21,6 +22,9 @@ export async function POST(req: NextRequest) {
     }
     if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
       return badRequest('quantity must be a positive integer');
+    }
+    if (!Number.isFinite(parsedPegSizeMl) || parsedPegSizeMl <= 0) {
+      return badRequest('peg_size_ml must be a positive number');
     }
 
     const itemName = item_name.trim();
@@ -38,24 +42,56 @@ export async function POST(req: NextRequest) {
 
     if (error) throw error;
 
-    const { data: inventoryRows, error: inventorySelectError } = await supabase
+    let inventoryQuery = supabase
       .from('inventory')
-      .select('id, quantity')
-      .eq('item_name', itemName)
+      .select('id, quantity, stock_quantity, current_stock_ml, bottle_size_ml')
       .limit(1);
+
+    const normalizedItemId =
+      typeof item_id === 'number'
+        ? item_id
+        : typeof item_id === 'string'
+          ? item_id.trim()
+          : '';
+    if (
+      (typeof normalizedItemId === 'number' && Number.isInteger(normalizedItemId) && normalizedItemId > 0) ||
+      (typeof normalizedItemId === 'string' && normalizedItemId.length > 0)
+    ) {
+      inventoryQuery = inventoryQuery.eq('id', normalizedItemId);
+    } else {
+      inventoryQuery = inventoryQuery.eq('item_name', itemName);
+    }
+
+    const { data: inventoryRows, error: inventorySelectError } = await inventoryQuery;
 
     if (inventorySelectError) throw inventorySelectError;
 
     const targetInventory = inventoryRows?.[0];
     if (targetInventory && targetInventory.id !== undefined && targetInventory.id !== null) {
-      const currentQuantity = Number(targetInventory.quantity);
-      const nextQuantity = Number.isFinite(currentQuantity)
-        ? Math.max(0, currentQuantity - parsedQuantity)
-        : 0;
+      const bottleSizeMl = Number(targetInventory.bottle_size_ml);
+      const fallbackBottleSizeMl = Number.isFinite(bottleSizeMl) && bottleSizeMl > 0 ? bottleSizeMl : 750;
+      const currentStockMlRaw = Number(targetInventory.current_stock_ml);
+      const currentStockMl =
+        Number.isFinite(currentStockMlRaw) && currentStockMlRaw >= 0
+          ? currentStockMlRaw
+          : Number(targetInventory.stock_quantity ?? targetInventory.quantity ?? 0) * fallbackBottleSizeMl;
+      const requiredStockMl = parsedQuantity * parsedPegSizeMl;
+
+      if (currentStockMl < requiredStockMl) {
+        return badRequest('Out of stock for requested peg quantity');
+      }
+
+      const nextStockMl = Number((currentStockMl - requiredStockMl).toFixed(2));
+      const nextStockQuantity = Math.max(0, Math.ceil(nextStockMl / fallbackBottleSizeMl));
 
       const { error: inventoryUpdateError } = await supabase
         .from('inventory')
-        .update({ quantity: nextQuantity, updated_at: new Date().toISOString() })
+        .update({
+          current_stock_ml: nextStockMl,
+          stock_quantity: nextStockQuantity,
+          quantity: nextStockQuantity,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', targetInventory.id);
 
       if (inventoryUpdateError) throw inventoryUpdateError;
@@ -74,6 +110,7 @@ export async function POST(req: NextRequest) {
         item_name: itemName,
         amount: parsedAmount,
         quantity: parsedQuantity,
+        peg_size_ml: parsedPegSizeMl,
       },
       after: saleRow,
     });

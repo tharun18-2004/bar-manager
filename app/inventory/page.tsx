@@ -12,7 +12,13 @@ import { useRouteGuard } from '@/lib/route-guard';
 interface InventoryItem {
   id: string;
   item_name: string;
+  brand_name: string;
   category: string;
+  bottle_size_ml: number;
+  cost_price: number;
+  selling_price: number;
+  stock_quantity: number;
+  current_stock_ml: number;
   quantity: number;
   unit_price: number;
   last_restocked?: string;
@@ -25,7 +31,16 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({ item_name: '', category: 'Drinks', quantity: 0, unit_price: 0 });
+  const [formData, setFormData] = useState({
+    item_name: '',
+    brand_name: '',
+    category: 'Whisky',
+    bottle_size_ml: 750,
+    cost_price: 0,
+    selling_price: 0,
+    stock_quantity: 0,
+    current_stock_ml: 0,
+  });
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -61,7 +76,16 @@ export default function InventoryPage() {
 
       if (res.ok) {
         setToast({ type: 'success', message: 'Item added.' });
-        setFormData({ item_name: '', category: 'Drinks', quantity: 0, unit_price: 0 });
+        setFormData({
+          item_name: '',
+          brand_name: '',
+          category: 'Whisky',
+          bottle_size_ml: 750,
+          cost_price: 0,
+          selling_price: 0,
+          stock_quantity: 0,
+          current_stock_ml: 0,
+        });
         setShowAddForm(false);
         fetchInventory();
       }
@@ -72,10 +96,16 @@ export default function InventoryPage() {
 
   const handleUpdateQuantity = async (id: string, newQuantity: number) => {
     try {
+      const row = inventory.find((item) => item.id === id);
+      const bottleSizeMl = Number(row?.bottle_size_ml ?? 750);
       await authFetch('/api/inventory', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, quantity: newQuantity }),
+        body: JSON.stringify({
+          id,
+          stock_quantity: newQuantity,
+          current_stock_ml: Math.max(0, newQuantity * bottleSizeMl),
+        }),
       });
       fetchInventory();
     } catch (error) {
@@ -83,8 +113,8 @@ export default function InventoryPage() {
     }
   };
 
-  const totalValue = inventory.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-  const lowStockItems = inventory.filter(item => item.quantity < 5).length;
+  const totalValue = inventory.reduce((sum, item) => sum + Number(item.stock_quantity ?? item.quantity ?? 0) * Number(item.cost_price ?? 0), 0);
+  const lowStockItems = inventory.filter(item => Number(item.current_stock_ml ?? 0) < 180).length;
 
   return (
     <div className="flex h-screen bg-slate-950 text-white">
@@ -116,29 +146,63 @@ export default function InventoryPage() {
                     className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                     required
                   />
+                  <input
+                    type="text"
+                    placeholder="Brand Name"
+                    value={formData.brand_name}
+                    onChange={(e) => setFormData({ ...formData, brand_name: e.target.value })}
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
+                    required
+                  />
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                   >
-                    <option>Drinks</option>
-                    <option>Food</option>
-                    <option>Supplies</option>
+                    <option>Beer</option>
+                    <option>Whisky</option>
+                    <option>Rum</option>
+                    <option>Vodka</option>
                   </select>
                   <input
                     type="number"
-                    placeholder="Quantity"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                    placeholder="Bottle Size (ml)"
+                    value={formData.bottle_size_ml}
+                    onChange={(e) => setFormData({ ...formData, bottle_size_ml: Number(e.target.value) })}
                     className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                     required
                   />
                   <input
                     type="number"
-                    placeholder="Unit Price"
+                    placeholder="Cost Price"
                     step="0.01"
-                    value={formData.unit_price}
-                    onChange={(e) => setFormData({ ...formData, unit_price: Number(e.target.value) })}
+                    value={formData.cost_price}
+                    onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Selling Price (per peg)"
+                    step="0.01"
+                    value={formData.selling_price}
+                    onChange={(e) => setFormData({ ...formData, selling_price: Number(e.target.value) })}
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Stock Quantity (bottles)"
+                    value={formData.stock_quantity}
+                    onChange={(e) => setFormData({ ...formData, stock_quantity: Number(e.target.value) })}
+                    className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Current Stock (ml)"
+                    value={formData.current_stock_ml}
+                    onChange={(e) => setFormData({ ...formData, current_stock_ml: Number(e.target.value) })}
                     className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-amber-400"
                     required
                   />
@@ -180,10 +244,14 @@ export default function InventoryPage() {
                 <thead className="bg-slate-800 border-b border-slate-700">
                   <tr>
                     <th className="px-6 py-3 text-left font-bold text-amber-400">Item</th>
+                    <th className="px-6 py-3 text-left font-bold text-amber-400">Brand</th>
                     <th className="px-6 py-3 text-left font-bold text-amber-400">Category</th>
-                    <th className="px-6 py-3 text-center font-bold text-amber-400">Quantity</th>
-                    <th className="px-6 py-3 text-right font-bold text-amber-400">Unit Price</th>
-                    <th className="px-6 py-3 text-right font-bold text-amber-400">Total Value</th>
+                    <th className="px-6 py-3 text-center font-bold text-amber-400">Bottle (ml)</th>
+                    <th className="px-6 py-3 text-center font-bold text-amber-400">Stock (Bottle)</th>
+                    <th className="px-6 py-3 text-center font-bold text-amber-400">Current (ml)</th>
+                    <th className="px-6 py-3 text-right font-bold text-amber-400">Cost</th>
+                    <th className="px-6 py-3 text-right font-bold text-amber-400">Selling</th>
+                    <th className="px-6 py-3 text-right font-bold text-amber-400">Inventory Value</th>
                     <th className="px-6 py-3 text-center font-bold text-amber-400">Actions</th>
                   </tr>
                 </thead>
@@ -191,26 +259,30 @@ export default function InventoryPage() {
                   {inventory.map(item => (
                     <tr key={item.id} className="hover:bg-slate-800 transition">
                       <td className="px-6 py-3 font-semibold">{item.item_name}</td>
+                      <td className="px-6 py-3 text-slate-300">{item.brand_name ?? '-'}</td>
                       <td className="px-6 py-3 text-slate-300">{item.category}</td>
+                      <td className="px-6 py-3 text-center">{item.bottle_size_ml ?? 750}</td>
                       <td className="px-6 py-3 text-center">
-                        <span className={item.quantity < 5 ? 'text-rose-300 font-bold' : 'text-emerald-300'}>
-                          {item.quantity}
+                        <span className={(item.stock_quantity ?? item.quantity) < 2 ? 'text-rose-300 font-bold' : 'text-emerald-300'}>
+                          {item.stock_quantity ?? item.quantity}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-right">{inrFormatter.format(item.unit_price)}</td>
+                      <td className="px-6 py-3 text-center">{item.current_stock_ml ?? 0}</td>
+                      <td className="px-6 py-3 text-right">{inrFormatter.format(item.cost_price ?? 0)}</td>
+                      <td className="px-6 py-3 text-right">{inrFormatter.format(item.selling_price ?? item.unit_price)}</td>
                       <td className="px-6 py-3 text-right font-bold text-emerald-300">
-                        {inrFormatter.format(item.quantity * item.unit_price)}
+                        {inrFormatter.format((item.stock_quantity ?? item.quantity ?? 0) * (item.cost_price ?? 0))}
                       </td>
                       <td className="px-6 py-3 text-center">
                         <div className="flex gap-2 justify-center">
                           <button
-                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => handleUpdateQuantity(item.id, (item.stock_quantity ?? item.quantity ?? 0) + 1)}
                             className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-sm font-bold"
                           >
                             +
                           </button>
                           <button
-                            onClick={() => handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                            onClick={() => handleUpdateQuantity(item.id, Math.max(0, (item.stock_quantity ?? item.quantity ?? 0) - 1))}
                             className="px-3 py-1 bg-rose-600 hover:bg-rose-500 rounded text-sm font-bold"
                           >
                             -
