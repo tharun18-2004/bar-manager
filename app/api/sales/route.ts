@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       }
 
       const nextStockMl = Number((currentStockMl - requiredStockMl).toFixed(2));
-      const nextStockQuantity = Math.max(0, Math.ceil(nextStockMl / fallbackBottleSizeMl));
+      const nextStockQuantity = Math.max(0, Math.floor(nextStockMl / fallbackBottleSizeMl));
 
       const { error: inventoryUpdateError } = await supabase
         .from('inventory')
