@@ -51,9 +51,15 @@ export default function EmployeePage() {
       const { data } = await res.json();
       if (data) {
         const formattedMenuItems = data.map((item: any) => ({
+          // Use selling_price when valid; fallback to unit_price for legacy rows.
+          price:
+            Number(item.selling_price) > 0
+              ? Number(item.selling_price)
+              : Number(item.unit_price) > 0
+                ? Number(item.unit_price)
+                : 0,
           id: String(item.id),
           name: item.item_name,
-          price: Number(item.selling_price ?? item.unit_price ?? 0),
           bottleSizeMl: Number(item.bottle_size_ml ?? 750),
           currentStockMl: Number(item.current_stock_ml ?? (Number(item.stock_quantity ?? item.quantity ?? 0) * Number(item.bottle_size_ml ?? 750))),
           pegSizeMl: 60,
@@ -85,6 +91,10 @@ export default function EmployeePage() {
   );
 
   const addToOrder = (item: MenuItem) => {
+    if (item.price <= 0) {
+      setToast({ type: 'info', message: `${item.name} has no selling price. Update product pricing first.` });
+      return;
+    }
     if (item.availablePegs <= 0) {
       setToast({ type: 'info', message: `${item.name} is out of stock.` });
       return;
