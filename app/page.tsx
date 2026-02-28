@@ -11,13 +11,13 @@ export default function Home() {
         <p className="text-slate-500 mb-8 uppercase tracking-widest text-xs">Management Suite</p>
         <div className="grid grid-cols-1 gap-4">
           <Link
-            href="/auth?next=/dashboard"
+            href="/auth?next=/dashboard&role=staff"
             className="block w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 transition"
           >
             STAFF SIGN IN
           </Link>
           <Link
-            href="/auth?next=/dashboard"
+            href="/auth?next=/dashboard&role=owner"
             className="block w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-700 transition"
           >
             OWNER SIGN IN
@@ -27,3 +27,5 @@ export default function Home() {
     </div>
   );
 }
+
+

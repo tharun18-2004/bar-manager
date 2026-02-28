@@ -13,6 +13,8 @@
     "verify": "npm run test:api && npm run test:pdf && npm run lint && npm run build"
   },
   "dependencies": {
+    "ag-grid-community": "^32.3.3",
+    "ag-grid-react": "^32.3.3",
     "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.47.12",
     "clsx": "^2.1.1",
@@ -22,7 +24,8 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "recharts": "^2.15.4",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",

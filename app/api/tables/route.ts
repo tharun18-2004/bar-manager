@@ -3,11 +3,20 @@ import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, serverError } from '@/lib/api-response';
 
-const ALLOWED_STATUSES = new Set(['available', 'occupied', 'needs_cleaning']);
+const ALLOWED_STATUSES = new Set(['available', 'occupied', 'cleaning']);
+
+function toStorageStatus(status: string) {
+  if (status === 'needs_cleaning') return 'cleaning';
+  return status;
+}
+
+function toApiStatus(status: unknown) {
+  return status === 'needs_cleaning' ? 'cleaning' : status;
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
+    const auth = await requireAuth(req, ['staff', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { data, error } = await supabase
@@ -17,7 +26,28 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data });
+    const [availableCountResult, occupiedCountResult, cleaningCountResult] = await Promise.all([
+      supabase.from('tables').select('*', { count: 'exact', head: true }).eq('status', 'available'),
+      supabase.from('tables').select('*', { count: 'exact', head: true }).eq('status', 'occupied'),
+      supabase.from('tables').select('*', { count: 'exact', head: true }).in('status', ['cleaning', 'needs_cleaning']),
+    ]);
+
+    if (availableCountResult.error) throw availableCountResult.error;
+    if (occupiedCountResult.error) throw occupiedCountResult.error;
+    if (cleaningCountResult.error) throw cleaningCountResult.error;
+
+    const normalized = Array.isArray(data)
+      ? data.map((row) => ({ ...row, status: toApiStatus(row.status) }))
+      : [];
+    return NextResponse.json({
+      success: true,
+      data: normalized,
+      stats: {
+        available: Number(availableCountResult.count ?? 0),
+        occupied: Number(occupiedCountResult.count ?? 0),
+        cleaning: Number(cleaningCountResult.count ?? 0),
+      },
+    });
   } catch (error) {
     return serverError(error, req);
   }
@@ -25,7 +55,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { table_number, table_label, capacity } = await req.json();
@@ -63,7 +93,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['staff', 'manager', 'owner']);
+    const auth = await requireAuth(req, ['staff', 'owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { id, status, customer_name, order_reference, order_amount } = await req.json();
@@ -77,8 +107,9 @@ export async function PUT(req: NextRequest) {
     if (!Number.isInteger(parsedId) || parsedId <= 0) {
       return badRequest('id must be a positive integer');
     }
-    if (!ALLOWED_STATUSES.has(normalizedStatus)) {
-      return badRequest('status must be one of: available, occupied, needs_cleaning');
+    const normalizedApiStatus = toApiStatus(normalizedStatus);
+    if (!ALLOWED_STATUSES.has(normalizedApiStatus)) {
+      return badRequest('status must be one of: available, occupied, cleaning');
     }
     if (customer_name !== undefined && customer_name !== null && typeof customer_name !== 'string') {
       return badRequest('customer_name must be a string');
@@ -90,15 +121,16 @@ export async function PUT(req: NextRequest) {
       return badRequest('order_amount must be a non-negative number');
     }
 
-    const updateData: Record<string, unknown> = { status: normalizedStatus };
-    if (normalizedStatus === 'available' || normalizedStatus === 'needs_cleaning') {
+    const storageStatus = toStorageStatus(normalizedApiStatus);
+    const updateData: Record<string, unknown> = { status: storageStatus };
+    if (storageStatus === 'available' || storageStatus === 'needs_cleaning') {
       updateData.customer_name = null;
       updateData.order_amount = null;
       updateData.order_reference = null;
     } else if (typeof customer_name === 'string' && customer_name.trim().length > 0) {
       updateData.customer_name = customer_name.trim();
     }
-    if (normalizedStatus === 'occupied') {
+    if (storageStatus === 'occupied') {
       if (normalizedOrderReference !== null) {
         updateData.order_reference = normalizedOrderReference;
       }
@@ -115,9 +147,13 @@ export async function PUT(req: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data });
+    const normalized = Array.isArray(data)
+      ? data.map((row) => ({ ...row, status: toApiStatus(row.status) }))
+      : [];
+    return NextResponse.json({ success: true, data: normalized });
   } catch (error) {
     return serverError(error, req);
   }
 }
+
 

@@ -51,6 +51,64 @@ export async function signIn(email: string, password: string) {
   return { data, error };
 }
 
+export async function signInWithEmailOtp(email: string) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+    },
+  });
+  return { data, error };
+}
+
+export async function signInWithPhoneOtp(phone: string) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone,
+    options: {
+      shouldCreateUser: false,
+    },
+  });
+  return { data, error };
+}
+
+export async function verifyPhoneOtp(phone: string, token: string) {
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: 'sms',
+  });
+  return { data, error };
+}
+
+export async function signInWithOAuthProvider(provider: 'google' | 'apple', nextPath = '/dashboard') {
+  const redirectTo =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth?next=${encodeURIComponent(nextPath)}`
+      : undefined;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo,
+    },
+  });
+  return { data, error };
+}
+
+export async function sendPasswordReset(email: string) {
+  const redirectTo =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth?mode=reset`
+      : undefined;
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  return { data, error };
+}
+
+export async function updatePassword(password: string) {
+  const { data, error } = await supabase.auth.updateUser({ password });
+  return { data, error };
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   return { error };

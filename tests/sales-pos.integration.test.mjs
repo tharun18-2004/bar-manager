@@ -11,15 +11,43 @@ let mockServer;
 let mockServerPort;
 
 const mockState = {
-  salesInserts: [],
-  inventoryRows: [{ id: 10, item_name: 'Beer Pint', quantity: 50 }],
-  inventoryUpdates: [],
+  rpcCalls: [],
+  inventoryRows: [
+    {
+      id: '11111111-1111-1111-1111-111111111111',
+      item_name: 'Beer Pint',
+      current_stock_ml: 5000,
+    },
+  ],
+  inventorySizes: [
+    {
+      id: '22222222-2222-2222-2222-222222222222',
+      inventory_id: '11111111-1111-1111-1111-111111111111',
+      size_ml: 60,
+      selling_price: 6,
+      is_active: true,
+    },
+  ],
 };
 
 function resetMockState() {
-  mockState.salesInserts = [];
-  mockState.inventoryRows = [{ id: 10, item_name: 'Beer Pint', quantity: 50 }];
-  mockState.inventoryUpdates = [];
+  mockState.rpcCalls = [];
+  mockState.inventoryRows = [
+    {
+      id: '11111111-1111-1111-1111-111111111111',
+      item_name: 'Beer Pint',
+      current_stock_ml: 5000,
+    },
+  ];
+  mockState.inventorySizes = [
+    {
+      id: '22222222-2222-2222-2222-222222222222',
+      inventory_id: '11111111-1111-1111-1111-111111111111',
+      size_ml: 60,
+      selling_price: 6,
+      is_active: true,
+    },
+  ];
 }
 
 async function readJson(req) {
@@ -36,46 +64,58 @@ function json(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 45000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function startMockSupabaseServer() {
   return new Promise((resolve, reject) => {
     mockServer = http.createServer(async (req, res) => {
       const reqUrl = new URL(req.url, 'http://127.0.0.1');
 
-      if (reqUrl.pathname === '/rest/v1/sales' && req.method === 'POST') {
+      if (reqUrl.pathname === '/rest/v1/rpc/create_sale_with_stock' && req.method === 'POST') {
         const body = await readJson(req);
-        const rows = Array.isArray(body) ? body : [body];
-        const inserted = rows.map((row, index) => ({
-          id: index + 1,
-          created_at: '2026-02-25T00:00:00.000Z',
-          ...row,
-        }));
-        mockState.salesInserts.push(...inserted);
-        json(res, 201, inserted);
-        return;
-      }
+        mockState.rpcCalls.push(body);
 
-      if (reqUrl.pathname === '/rest/v1/inventory' && req.method === 'GET') {
-        const itemNameFilter = reqUrl.searchParams.get('item_name');
-        const itemName = itemNameFilter && itemNameFilter.startsWith('eq.') ? itemNameFilter.slice(3) : null;
-        const rows = itemName
-          ? mockState.inventoryRows.filter((row) => row.item_name === itemName)
-          : mockState.inventoryRows;
-        json(res, 200, rows.slice(0, 1));
-        return;
-      }
+        const inventory = mockState.inventoryRows.find((row) => row.id === body?.p_inventory_id);
+        const size = mockState.inventorySizes.find(
+          (row) => row.id === body?.p_inventory_size_id && row.inventory_id === body?.p_inventory_id
+        );
 
-      if (reqUrl.pathname === '/rest/v1/inventory' && req.method === 'PATCH') {
-        const body = await readJson(req);
-        const idFilter = reqUrl.searchParams.get('id');
-        const id = idFilter && idFilter.startsWith('eq.') ? Number(idFilter.slice(3)) : NaN;
-        const rowIndex = mockState.inventoryRows.findIndex((row) => row.id === id);
-        if (rowIndex >= 0) {
-          mockState.inventoryRows[rowIndex] = { ...mockState.inventoryRows[rowIndex], ...body };
-          mockState.inventoryUpdates.push(mockState.inventoryRows[rowIndex]);
-          json(res, 200, [mockState.inventoryRows[rowIndex]]);
+        if (!inventory || !size || !size.is_active) {
+          json(res, 400, { message: 'inventory size not found or inactive' });
           return;
         }
-        json(res, 200, []);
+
+        const quantity = Number(body?.p_quantity ?? 0);
+        if (!Number.isInteger(quantity) || quantity <= 0) {
+          json(res, 400, { message: 'quantity must be > 0' });
+          return;
+        }
+
+        const requiredMl = quantity * size.size_ml;
+        if (inventory.current_stock_ml < requiredMl) {
+          json(res, 400, { message: 'insufficient stock' });
+          return;
+        }
+
+        inventory.current_stock_ml -= requiredMl;
+
+        json(res, 200, {
+          sale_id: 'sale-1',
+          item_name: inventory.item_name,
+          size_ml: size.size_ml,
+          quantity,
+          unit_price: size.selling_price,
+          line_total: size.selling_price * quantity,
+          remaining_stock_ml: inventory.current_stock_ml,
+        });
         return;
       }
 
@@ -112,30 +152,27 @@ test.beforeEach(() => {
 });
 
 test('POST /api/sales with staff token creates sales row for POS completion', async () => {
-  const response = await fetch(`${BASE_URL}/api/sales`, {
+  const response = await fetchWithTimeout(`${BASE_URL}/api/sales`, {
     method: 'POST',
     headers: {
       authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      item_name: 'Beer Pint',
-      amount: 6,
+      inventory_id: '11111111-1111-1111-1111-111111111111',
+      inventory_size_id: '22222222-2222-2222-2222-222222222222',
       quantity: 1,
-      staff_name: 'Manual Override',
     }),
   });
   const payload = await response.json();
 
   assert.equal(response.status, 201);
   assert.equal(payload.success, true);
-  assert.equal(Array.isArray(payload.data), true);
-  assert.equal(payload.data.length, 1);
-  assert.equal(mockState.salesInserts.length, 1);
-  assert.equal(mockState.salesInserts[0].item_name, 'Beer Pint');
-  assert.equal(mockState.salesInserts[0].amount, 6);
-  assert.equal(mockState.salesInserts[0].is_voided, false);
-  assert.equal(mockState.salesInserts[0].staff_name, 'staff@example.test');
-  assert.equal(mockState.inventoryUpdates.length, 1);
-  assert.equal(mockState.inventoryUpdates[0].quantity, 49);
+  assert.equal(typeof payload.data, 'object');
+  assert.equal(payload.data.item_name, 'Beer Pint');
+  assert.equal(payload.data.quantity, 1);
+  assert.equal(payload.data.unit_price, 6);
+  assert.equal(payload.data.remaining_stock_ml, 4940);
+  assert.equal(mockState.rpcCalls.length, 1);
+  assert.equal(mockState.rpcCalls[0].p_staff_name, 'staff@example.test');
 });

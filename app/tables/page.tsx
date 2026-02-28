@@ -10,7 +10,7 @@ import { authFetch } from '@/lib/auth-fetch';
 import { formatError } from '@/lib/errors';
 import { useRouteGuard } from '@/lib/route-guard';
 
-type TableStatus = 'available' | 'occupied' | 'needs_cleaning' | 'reserved';
+type TableStatus = 'available' | 'occupied' | 'cleaning' | 'needs_cleaning' | 'reserved';
 
 interface Table {
   id: string;
@@ -24,9 +24,9 @@ interface Table {
   created_at: string;
 }
 
-function normalizeStatus(status: TableStatus): 'available' | 'occupied' | 'needs_cleaning' {
-  if (status === 'reserved') return 'needs_cleaning';
-  return status;
+function normalizeStatus(status: TableStatus): 'available' | 'occupied' | 'cleaning' {
+  if (status === 'reserved' || status === 'needs_cleaning') return 'cleaning';
+  return status as 'available' | 'occupied' | 'cleaning';
 }
 
 function getDisplayLabel(table: Table) {
@@ -36,8 +36,13 @@ function getDisplayLabel(table: Table) {
 }
 
 export default function TablesPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'manager', 'owner']);
+  const { isChecking, isAuthorized, role } = useRouteGuard(['staff', 'owner']);
   const [tables, setTables] = useState<Table[]>([]);
+  const [tableStats, setTableStats] = useState<{ available: number; occupied: number; cleaning: number }>({
+    available: 0,
+    occupied: 0,
+    cleaning: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -59,18 +64,12 @@ export default function TablesPage() {
     try {
       const res = await authFetch('/api/tables');
       const data = await res.json();
-      if (!data.data || data.data.length === 0) {
-        const sampleTables: Table[] = [
-          { id: '1', table_number: 1, table_label: 'T1', capacity: 2, status: 'available', created_at: new Date().toISOString() },
-          { id: '2', table_number: 2, table_label: 'T2', capacity: 4, status: 'occupied', customer_name: 'Walk-in', created_at: new Date().toISOString() },
-          { id: '3', table_number: 3, table_label: 'VIP1', capacity: 6, status: 'available', created_at: new Date().toISOString() },
-          { id: '4', table_number: 4, table_label: 'VIP2', capacity: 8, status: 'needs_cleaning', created_at: new Date().toISOString() },
-          { id: '5', table_number: 5, table_label: 'BAR', capacity: 6, status: 'available', created_at: new Date().toISOString() },
-        ];
-        setTables(sampleTables);
-      } else {
-        setTables(data.data);
-      }
+      setTables(Array.isArray(data.data) ? data.data : []);
+      setTableStats({
+        available: Number(data?.stats?.available ?? 0),
+        occupied: Number(data?.stats?.occupied ?? 0),
+        cleaning: Number(data?.stats?.cleaning ?? 0),
+      });
     } catch (error) {
       setToast({ type: 'error', message: `Failed to fetch tables: ${formatError(error)}` });
     } finally {
@@ -81,7 +80,7 @@ export default function TablesPage() {
   const updateTable = async (
     tableId: string,
     payload: {
-      status: 'available' | 'occupied' | 'needs_cleaning';
+      status: 'available' | 'occupied' | 'cleaning';
       customer_name?: string;
       order_reference?: string;
       order_amount?: number;
@@ -100,16 +99,16 @@ export default function TablesPage() {
     }
   };
 
-  const statusColors: Record<'available' | 'occupied' | 'needs_cleaning', string> = {
+  const statusColors: Record<'available' | 'occupied' | 'cleaning', string> = {
     available: 'bg-emerald-50 border-emerald-200 text-emerald-700',
     occupied: 'bg-amber-50 border-amber-200 text-amber-800',
-    needs_cleaning: 'bg-rose-50 border-rose-200 text-rose-700',
+    cleaning: 'bg-rose-50 border-rose-200 text-rose-700',
   };
 
-  const statusEmoji: Record<'available' | 'occupied' | 'needs_cleaning', string> = {
+  const statusEmoji: Record<'available' | 'occupied' | 'cleaning', string> = {
     available: '🟢',
     occupied: '🟡',
-    needs_cleaning: '🔴',
+    cleaning: '🔴',
   };
 
   const normalizedTables = tables.map((table) => ({
@@ -117,46 +116,50 @@ export default function TablesPage() {
     status: normalizeStatus(table.status),
   }));
 
-  const occupiedTables = normalizedTables.filter((t) => t.status === 'occupied').length;
-  const cleaningTables = normalizedTables.filter((t) => t.status === 'needs_cleaning').length;
-  const availableTables = normalizedTables.filter((t) => t.status === 'available').length;
+  const occupiedTables = tableStats.occupied;
+  const cleaningTables = tableStats.cleaning;
+  const availableTables = tableStats.available;
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-900">
+    <div className="layout flex h-screen bg-slate-100 text-slate-900">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="main-content flex flex-col min-w-0">
         <PageHeader title="Table Management" role={role} />
 
         <div className="flex-1 p-8 overflow-y-auto">
           <div className="grid grid-cols-3 gap-6 mb-8">
             <StatCard label="Available" value={availableTables.toString()} type="success" />
             <StatCard label="Occupied" value={occupiedTables.toString()} />
-            <StatCard label="Needs Cleaning" value={cleaningTables.toString()} type="danger" />
+            <StatCard label="Cleaning" value={cleaningTables.toString()} type="danger" />
           </div>
 
           {loading ? (
             <p className="text-slate-500">Loading tables...</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {normalizedTables.map((table) => (
-                <button
-                  key={table.id}
-                  onClick={() => setSelectedTable(table)}
-                  className={`p-5 rounded-2xl border-2 shadow-sm transition hover:-translate-y-0.5 ${
-                    selectedTable?.id === table.id ? 'ring-2 ring-blue-400' : ''
-                  } ${statusColors[table.status]}`}
-                >
-                  <p className="text-3xl mb-1">{statusEmoji[table.status]}</p>
-                  <p className="text-lg font-black">{getDisplayLabel(table)}</p>
-                  <p className="text-xs opacity-80">Capacity: {table.capacity}</p>
-                  <p className="text-xs mt-2 capitalize">{table.status.replace('_', ' ')}</p>
-                  {table.customer_name && <p className="text-xs mt-1 truncate">Guest: {table.customer_name}</p>}
-                  {table.order_reference && <p className="text-xs mt-1 truncate">Order: {table.order_reference}</p>}
-                </button>
-              ))}
-            </div>
+            normalizedTables.length === 0 ? (
+              <p className="text-slate-500">No tables found in database.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                {normalizedTables.map((table) => (
+                  <button
+                    key={table.id}
+                    onClick={() => setSelectedTable(table)}
+                    className={`p-5 rounded-2xl border-2 shadow-sm transition hover:-translate-y-0.5 ${
+                      selectedTable?.id === table.id ? 'ring-2 ring-blue-400' : ''
+                    } ${statusColors[table.status]}`}
+                  >
+                    <p className="text-3xl mb-1">{statusEmoji[table.status]}</p>
+                    <p className="text-lg font-black">{getDisplayLabel(table)}</p>
+                    <p className="text-xs opacity-80">Capacity: {table.capacity}</p>
+                    <p className="text-xs mt-2 capitalize">{table.status.replace('_', ' ')}</p>
+                    {table.customer_name && <p className="text-xs mt-1 truncate">Guest: {table.customer_name}</p>}
+                    {table.order_reference && <p className="text-xs mt-1 truncate">Order: {table.order_reference}</p>}
+                  </button>
+                ))}
+              </div>
+            )
           )}
 
           {selectedTable && (
@@ -192,7 +195,7 @@ export default function TablesPage() {
                     onClick={() => setOccupancyTarget({ tableId: selectedTable.id })}
                     className="w-full py-2 bg-amber-500 hover:bg-amber-400 rounded-xl font-bold transition"
                   >
-                    Mark Occupied
+                    Start Order
                   </button>
                 )}
 
@@ -205,26 +208,20 @@ export default function TablesPage() {
                       Assign / Update Order
                     </button>
                     <button
-                      onClick={() => void updateTable(selectedTable.id, { status: 'needs_cleaning' })}
+                      onClick={() => void updateTable(selectedTable.id, { status: 'cleaning' })}
                       className="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold transition"
                     >
-                      Mark Needs Cleaning
-                    </button>
-                    <button
-                      onClick={() => void updateTable(selectedTable.id, { status: 'available' })}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition"
-                    >
-                      Close Table
+                      Close Bill
                     </button>
                   </>
                 )}
 
-                {normalizeStatus(selectedTable.status) === 'needs_cleaning' && (
+                {normalizeStatus(selectedTable.status) === 'cleaning' && (
                   <button
                     onClick={() => void updateTable(selectedTable.id, { status: 'available' })}
                     className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition"
                   >
-                    Mark Clean / Available
+                    Mark Clean
                   </button>
                 )}
               </div>
@@ -272,3 +269,8 @@ export default function TablesPage() {
     </div>
   );
 }
+
+
+
+
+

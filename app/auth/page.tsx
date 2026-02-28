@@ -1,30 +1,33 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { getCurrentUser, getSession, signIn, signUp } from '@/lib/auth';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  getCurrentUser,
+  getSession,
+  sendPasswordReset,
+  signIn,
+  updatePassword,
+} from '@/lib/auth';
+
+type LoginMode = 'staff' | 'owner';
+type AuthView = 'password' | 'forgot' | 'reset';
+
+function resolveLoginMode(rawMode: string | null): LoginMode {
+  return rawMode === 'owner' ? 'owner' : 'staff';
+}
 
 function resolveNextPath(nextValue: string | null): string {
-  if (!nextValue) return '/dashboard';
-  if (!nextValue.startsWith('/')) return '/dashboard';
-  if (nextValue.startsWith('//')) return '/dashboard';
+  if (!nextValue || !nextValue.startsWith('/') || nextValue.startsWith('//')) return '/dashboard';
   return nextValue;
 }
 
-type LoginMode = 'staff' | 'owner';
-
-function resolveRole(rawRole: unknown): 'staff' | 'manager' | 'owner' {
-  if (rawRole === 'owner' || rawRole === 'manager') return rawRole;
+function resolveRole(rawRole: unknown): 'staff' | 'owner' {
+  if (rawRole === 'owner' ) return rawRole;
   return 'staff';
 }
 
-function defaultPathForRole(role: 'staff' | 'manager' | 'owner') {
-  return '/dashboard';
-}
-
-async function resolveEffectiveRoleFromServer(accessToken: string): Promise<'staff' | 'manager' | 'owner' | null> {
+async function resolveEffectiveRoleFromServer(accessToken: string): Promise<'staff' | 'owner' | 'inactive' | null> {
   try {
     const response = await fetch('/api/auth-context', {
       headers: {
@@ -32,13 +35,11 @@ async function resolveEffectiveRoleFromServer(accessToken: string): Promise<'sta
         'x-request-id': crypto.randomUUID(),
       },
     });
+    if (response.status === 403) return 'inactive';
     if (!response.ok) return null;
     const payload = await response.json();
     const role = payload?.data?.role;
-    if (role === 'owner' || role === 'manager' || role === 'staff') {
-      return role;
-    }
-    return null;
+    return role === 'owner'  || role === 'staff' ? role : null;
   } catch {
     return null;
   }
@@ -47,205 +48,323 @@ async function resolveEffectiveRoleFromServer(accessToken: string): Promise<'sta
 function authConnectivityHint() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
-
-  if (!url) {
-    return 'NEXT_PUBLIC_SUPABASE_URL is missing in deployment env.';
-  }
-
-  if (!url.startsWith('https://')) {
-    return `NEXT_PUBLIC_SUPABASE_URL must start with https:// (current: ${url}).`;
-  }
-
-  try {
-    const host = new URL(url).host;
-    if (!host.endsWith('.supabase.co')) {
-      return `Supabase URL host must end with .supabase.co (current host: ${host}).`;
-    }
-    return `Could not reach Supabase Auth at ${host}. Check project status and anon key.`;
-  } catch {
-    return `NEXT_PUBLIC_SUPABASE_URL is invalid: ${url}`;
-  }
+  if (!url) return 'NEXT_PUBLIC_SUPABASE_URL is missing in deployment env.';
+  if (!url.startsWith('https://')) return `NEXT_PUBLIC_SUPABASE_URL must start with https:// (current: ${url}).`;
+  return 'Could not reach Supabase Auth. Check project status and anon key.';
 }
 
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLogin, setIsLogin] = useState(true);
+  const requestedLoginMode = resolveLoginMode(searchParams.get('role'));
+
+  const [view, setView] = useState<AuthView>('password');
+  const [loginMode, setLoginMode] = useState<LoginMode>('staff');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetConfirmPassword, setShowResetConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [loginMode, setLoginMode] = useState<LoginMode>('staff');
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const toggleButtonClass = (active: boolean) =>
+    `absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md border px-2 py-1 text-xs font-semibold shadow-sm transition ${
+      active
+        ? 'border-blue-500 bg-blue-600 text-white'
+        : 'border-slate-500 bg-slate-800 text-slate-100 hover:border-slate-300 hover:bg-slate-700'
+    }`;
+
+  useEffect(() => {
+    setLoginMode(requestedLoginMode);
+  }, [requestedLoginMode]);
+
+  useEffect(() => {
+    if (searchParams.get('mode') === 'reset') {
+      setView('reset');
+      return;
+    }
+    void (async () => {
+      const session = await getSession();
+      if (!session?.access_token) return;
+      const roleFromServer = await resolveEffectiveRoleFromServer(session.access_token);
+      if (roleFromServer === 'inactive') return;
+      const user = await getCurrentUser();
+      const metadataRole = resolveRole(user?.app_metadata?.role ?? user?.user_metadata?.role);
+      const effectiveRole = roleFromServer ?? metadataRole;
+      if (loginMode === 'owner' && effectiveRole !== 'owner') return;
+      const nextPath = resolveNextPath(searchParams.get('next'));
+      router.replace(nextPath);
+    })();
+  }, [loginMode, router, searchParams]);
+
+  async function routeAfterAuth() {
+    const user = await getCurrentUser();
+    const session = await getSession();
+    const metadataRole = resolveRole(user?.app_metadata?.role ?? user?.user_metadata?.role);
+    const serverRole = session?.access_token ? await resolveEffectiveRoleFromServer(session.access_token) : null;
+    if (serverRole === 'inactive') {
+      throw new Error('This account is inactive. Contact the owner.');
+    }
+    const effectiveRole = serverRole ?? metadataRole;
+
+    if (loginMode === 'owner' && effectiveRole !== 'owner') {
+      throw new Error('This account is not an owner account. Use Staff login.');
+    }
+    if (loginMode === 'staff' && effectiveRole === 'owner') {
+      throw new Error('Owner account detected. Please use Owner login.');
+    }
+
+    const requestedNext = searchParams.get('next');
+    router.push(resolveNextPath(requestedNext));
+  }
+
+  function mapError(err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes('failed to fetch')) {
+      return `Cannot reach authentication server. ${authConnectivityHint()}`;
+    }
+    return message || 'Authentication failed';
+  }
+
+  async function handlePasswordAuth(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
-
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) throw error;
-
-        const user = await getCurrentUser();
-        const appRole = resolveRole(user?.app_metadata?.role);
-        const profileRole = resolveRole(user?.user_metadata?.role);
-        const session = await getSession();
-        const roleFromServer = session?.access_token
-          ? await resolveEffectiveRoleFromServer(session.access_token)
-          : null;
-        const metadataRole = appRole === 'owner' || profileRole === 'owner' ? 'owner' : appRole;
-        const effectiveRole = roleFromServer ?? metadataRole;
-
-        const requestedNext = searchParams.get('next');
-        const selectedPath = '/dashboard';
-        const nextPath = requestedNext
-          ? resolveNextPath(requestedNext)
-          : selectedPath === defaultPathForRole(effectiveRole)
-            ? selectedPath
-            : defaultPathForRole(effectiveRole);
-
-        if (loginMode === 'owner' && effectiveRole !== 'owner') {
-          router.push(defaultPathForRole(effectiveRole));
-          return;
-        }
-
-        if (loginMode === 'staff' && effectiveRole === 'owner') {
-          router.push('/dashboard');
-          return;
-        }
-
-        router.push(nextPath);
-      } else {
-        const { error } = await signUp(email, password, fullName);
-        if (error) throw error;
-        setSuccess('Account created. Please sign in.');
-        setIsLogin(true);
-      }
+      const { error: signInError } = await signIn(email, password);
+      if (signInError) throw signInError;
+      await routeAfterAuth();
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.toLowerCase().includes('failed to fetch')) {
-        setError(`Cannot reach authentication server. ${authConnectivityHint()}`);
-      } else {
-        setError(message || 'Authentication failed');
-      }
+      setError(mapError(err));
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const { error: resetError } = await sendPasswordReset(email);
+      if (resetError) throw resetError;
+      setSuccess('Password reset email sent.');
+    } catch (err) {
+      setError(mapError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasswordUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      if (newPassword.length < 6) throw new Error('Password must be at least 6 characters.');
+      if (newPassword !== confirmPassword) throw new Error('Passwords do not match.');
+      const { error: updateError } = await updatePassword(newPassword);
+      if (updateError) throw updateError;
+      const resetUser = await getCurrentUser();
+      const resetEmail = typeof resetUser?.email === 'string' ? resetUser.email : '';
+      if (resetEmail) {
+        const { error: signInError } = await signIn(resetEmail, newPassword);
+        if (signInError) throw signInError;
+        setSuccess('Password updated. Redirecting...');
+        await routeAfterAuth();
+        return;
+      }
+      setSuccess('Password updated. Please sign in.');
+      setView('password');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError(mapError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 grid grid-cols-1 lg:grid-cols-2">
-      <div className="relative flex bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-600 flex-col items-start justify-end p-8 lg:p-12 min-h-56 lg:min-h-screen overflow-hidden">
-        <div className="absolute -top-20 -left-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
-        <h1 className="relative text-5xl lg:text-6xl font-black text-white mb-3 tracking-tight">BAR-LOGIC</h1>
-        <p className="relative text-lg lg:text-2xl text-blue-50 max-w-md">Professional Bar Management System</p>
-        <div className="relative mt-6 lg:mt-10 rounded-2xl bg-white/15 border border-white/30 px-6 py-4 text-blue-50 text-sm">
-          Built for staff speed, owner visibility, and operational control.
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center p-6 lg:p-10">
-        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 lg:p-8 shadow-sm">
-          <h2 className="text-3xl font-black mb-8 text-slate-900">{isLogin ? 'Sign In' : 'Create Account'}</h2>
-
-          {isLogin && (
-            <div className="mb-6">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setLoginMode('staff')}
-                  className={`py-2 rounded-xl font-bold transition ${
-                    loginMode === 'staff'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Staff Login
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginMode('owner')}
-                  className={`py-2 rounded-xl font-bold transition ${
-                    loginMode === 'owner'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Owner Login
-                </button>
-              </div>
-              <p className="mt-3 text-xs text-slate-500">
-                You will be redirected to your allowed dashboard based on account role.
-              </p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#0b1220,_#111827_48%,_#0a0f1a)] text-slate-100 px-4 py-8">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        <section className="flex flex-col justify-between rounded-3xl border border-slate-400/20 bg-gradient-to-br from-blue-500/15 via-slate-800/50 to-slate-900/60 p-8 shadow-2xl shadow-black/30 backdrop-blur-md">
+          <div>
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-blue-300/30 bg-slate-900/50 px-3 py-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-black text-white">BL</span>
+              <p className="text-sm font-bold tracking-wide text-blue-100">BarLogic POS</p>
             </div>
-          )}
-
-          <form onSubmit={handleAuth} className="space-y-4">
-            {!isLogin && (
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-400"
-                required={!isLogin}
-              />
-            )}
-
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-400"
-              required
-            />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-400"
-              required
-            />
-
-            {error && <p className="text-rose-400 text-sm">{error}</p>}
-            {success && <p className="text-emerald-400 text-sm">{success}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white disabled:bg-slate-300 disabled:text-slate-600 py-3 rounded-xl font-bold transition"
-            >
-              {loading
-                ? 'Processing...'
-                : isLogin
-                  ? loginMode === 'owner'
-                    ? 'Sign In as Owner'
-                    : 'Sign In as Staff'
-                  : 'Create Account'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-slate-600">
-              {isLogin ? "Don't have an account? " : 'Already have an account? '}
-              <button
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-blue-600 hover:text-blue-500 font-bold transition"
-              >
-                {isLogin ? 'Sign Up' : 'Sign In'}
-              </button>
+            <h1 className="mt-5 text-4xl font-black leading-tight">Modern POS for Bars and Restaurants</h1>
+            <p className="mt-4 max-w-md text-slate-200/90">
+              Manage tables, orders, inventory, and sales analytics in one platform.
             </p>
           </div>
+          <div className="mt-8 rounded-2xl border border-slate-500/30 bg-slate-900/40 p-4 text-sm text-slate-200">
+            <p className="font-semibold text-blue-100">Role-based access control</p>
+            <p className="mt-1">Staff handles POS operations. Owner manages analytics, inventory, and reports.</p>
+          </div>
+        </section>
 
-        </div>
+        <section className="rounded-3xl border border-slate-400/20 bg-slate-900/60 p-6 shadow-2xl shadow-black/40 backdrop-blur-md sm:p-8">
+          <div className="mb-4">
+            <h2 className="text-2xl font-black text-slate-100">Sign In</h2>
+            <p className="text-sm text-slate-300">Secure access for your workspace</p>
+          </div>
+          <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-900 p-1">
+            <button
+              type="button"
+              onClick={() => setLoginMode('staff')}
+              className={`rounded-lg py-2 text-sm font-bold transition ${loginMode === 'staff' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              Staff
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMode('owner')}
+              className={`rounded-lg py-2 text-sm font-bold transition ${loginMode === 'owner' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              Owner
+            </button>
+          </div>
+
+          {view === 'password' && (
+            <form onSubmit={handlePasswordAuth} className="space-y-3">
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 outline-none focus:border-blue-400"
+              />
+              <div className="relative">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 pr-20 outline-none focus:border-blue-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword((prev) => !prev)}
+                  className={toggleButtonClass(showLoginPassword)}
+                >
+                  {showLoginPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 font-black text-white transition hover:from-blue-500 hover:to-blue-600 disabled:opacity-60"
+              >
+                {loading ? 'Processing...' : 'Sign In'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('forgot')}
+                className="w-full text-sm font-semibold text-blue-300 hover:text-blue-200"
+              >
+                Forgot Password?
+              </button>
+            </form>
+          )}
+
+          {view === 'forgot' && (
+            <form onSubmit={handleForgotPassword} className="space-y-3">
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 outline-none focus:border-blue-400"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 font-black text-white transition hover:from-blue-500 hover:to-blue-600 disabled:opacity-60"
+              >
+                {loading ? 'Sending...' : 'Send Reset Email'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('password')}
+                className="w-full text-sm font-semibold text-slate-300 hover:text-white"
+              >
+                Back to Login
+              </button>
+            </form>
+          )}
+
+          {view === 'reset' && (
+            <form onSubmit={handlePasswordUpdate} className="space-y-3">
+              <div className="relative">
+                <input
+                  type={showResetPassword ? 'text' : 'password'}
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 pr-20 outline-none focus:border-blue-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetPassword((prev) => !prev)}
+                  className={toggleButtonClass(showResetPassword)}
+                >
+                  {showResetPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showResetConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 pr-20 outline-none focus:border-blue-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirmPassword((prev) => !prev)}
+                  className={toggleButtonClass(showResetConfirmPassword)}
+                >
+                  {showResetConfirmPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 font-black text-white transition hover:from-blue-500 hover:to-blue-600 disabled:opacity-60"
+              >
+                {loading ? 'Updating...' : 'Update Password'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('password')}
+                className="w-full text-sm font-semibold text-slate-300 hover:text-white"
+              >
+                Back to Login
+              </button>
+            </form>
+          )}
+
+          {error && <p className="mt-4 text-sm text-rose-300">{error}</p>}
+          {success && <p className="mt-4 text-sm text-emerald-300">{success}</p>}
+          <div className="mt-4 text-center text-xs text-slate-400">
+            <p>Powered by BarLogic Technologies</p>
+            <p className="mt-1">© 2026 All rights reserved</p>
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -258,3 +377,5 @@ export default function AuthPage() {
     </Suspense>
   );
 }
+
+

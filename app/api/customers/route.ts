@@ -5,7 +5,7 @@ import { badRequest, serverError } from '@/lib/api-response';
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { data, error } = await supabase
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { name, phone, email } = await req.json();
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { id, name, phone, email, total_spent, visit_count } = await req.json();
@@ -126,7 +126,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const auth = await requireAuth(req, ['manager', 'owner']);
+    const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
@@ -148,4 +148,5 @@ export async function DELETE(req: NextRequest) {
     return serverError(error, req);
   }
 }
+
 

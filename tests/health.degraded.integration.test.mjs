@@ -9,8 +9,8 @@ let serverProcess;
 
 test.before(async () => {
   serverProcess = await startNextDevServer(TEST_PORT, {
-    NEXT_PUBLIC_SUPABASE_URL: null,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: null,
+    NEXT_PUBLIC_SUPABASE_URL: '',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
   });
 });
 

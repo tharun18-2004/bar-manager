@@ -1,11 +1,17 @@
-.vercel
-.env*.local
-node_modules/
+.vercel/
 .next/
-.tmp-test-build/
-.DS_Store
-tsconfig.tsbuildinfo
-node_modules
-node_modules
+node_modules/
 
-.vercel
+# Environment files
+.env*.local
+.env.prodcheck
+
+# Build/test artifacts
+.tmp-test-build/
+.tmp-dev-*.log
+build.log
+build_output.txt
+tsconfig.tsbuildinfo
+
+# OS
+.DS_Store

@@ -28,7 +28,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('week');
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('month');
 
   const handleDownloadPdf = async () => {
     if (!salesData || exporting) return;
@@ -59,36 +59,16 @@ export default function ReportsPage() {
     setLoading(true);
 
     try {
-      const res = await authFetch(`/api/sales?range=${dateRange}`);
-      const data = await res.json();
-
-      if (data.data && data.data.length > 0) {
-        const sales = data.data;
-        const nonVoided = sales.filter((s: any) => !s.is_voided);
-
-        const totalRevenue = nonVoided.reduce((sum: number, s: any) => sum + s.amount, 0);
-        const itemCounts: { [key: string]: { count: number; revenue: number } } = {};
-
-        nonVoided.forEach((s: any) => {
-          if (!itemCounts[s.item_name]) {
-            itemCounts[s.item_name] = { count: 0, revenue: 0 };
-          }
-          itemCounts[s.item_name].count += 1;
-          itemCounts[s.item_name].revenue += s.amount;
-        });
-
-        const topItems = Object.entries(itemCounts)
-          .map(([name, item]) => ({ name, ...item }))
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 5);
-
-        setSalesData({
-          total_revenue: totalRevenue,
-          total_transactions: nonVoided.length,
-          total_voided: sales.filter((s: any) => s.is_voided).length,
-          avg_transaction: nonVoided.length > 0 ? totalRevenue / nonVoided.length : 0,
-          top_items: topItems,
-        });
+      const tzOffset = encodeURIComponent(String(new Date().getTimezoneOffset()));
+      const reportsRes = await authFetch(`/api/reports?range=${dateRange}&tz_offset=${tzOffset}`);
+      const payload = await reportsRes.json();
+      if (payload?.success && payload?.data) {
+        const summary = payload.data as SalesData;
+        if ((summary.total_transactions ?? 0) > 0) {
+          setSalesData(summary);
+        } else {
+          setSalesData(null);
+        }
       } else {
         setSalesData(null);
       }
@@ -112,10 +92,10 @@ export default function ReportsPage() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-900">
+    <div className="layout flex h-screen bg-slate-100 text-slate-900">
       <Sidebar role={role} />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="main-content flex flex-col min-w-0">
         <PageHeader title="Reports & Analytics" role={role} />
 
         <div className="flex-1 p-6 overflow-y-auto">
@@ -164,7 +144,7 @@ export default function ReportsPage() {
               </div>
 
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-2xl font-bold mb-6 text-slate-900">Top 5 Items by Revenue</h2>
+                <h2 className="text-2xl font-bold mb-6 text-slate-900">Top 5 Items by Quantity</h2>
                 <div className="space-y-4">
                   {salesData.top_items.map((item, index) => (
                     <div key={item.name}>
@@ -178,7 +158,7 @@ export default function ReportsPage() {
                         <div
                           className="bg-gradient-to-r from-blue-500 to-green-500 h-full"
                           style={{
-                            width: `${(item.revenue / Math.max(...salesData.top_items.map((i) => i.revenue))) * 100}%`,
+                            width: `${(item.count / Math.max(...salesData.top_items.map((i) => i.count))) * 100}%`,
                           }}
                         />
                       </div>
@@ -225,3 +205,5 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+

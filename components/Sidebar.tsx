@@ -18,12 +18,15 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', roles: ['staff', 'manager', 'owner'] },
-  { href: '/employee', label: 'POS', roles: ['staff', 'manager', 'owner'] },
-  { href: '/tables', label: 'Tables', roles: ['staff', 'manager', 'owner'] },
+  { href: '/dashboard', label: 'Dashboard', roles: ['staff', 'owner'] },
+  { href: '/employee', label: 'POS', roles: ['staff', 'owner'] },
+  { href: '/tables', label: 'Tables', roles: ['staff', 'owner'] },
   { href: '/reports', label: 'Reports', roles: ['owner'] },
   { href: '/inventory', label: 'Inventory', roles: ['owner'] },
+  { href: '/expenses', label: 'Expenses', roles: ['owner'] },
+  { href: '/inventory/stock-register', label: 'Stock Register', roles: ['staff', 'owner'] },
   { href: '/owner-analytics', label: 'Owner Analytics', roles: ['owner'] },
+  { href: '/staff', label: 'Staff Management', roles: ['owner'] },
   { href: '/owner/audit', label: 'Audit Logs', roles: ['owner'] },
 ];
 
@@ -49,18 +52,18 @@ export default function Sidebar({ role }: SidebarProps) {
   };
 
   return (
-    <aside className="w-72 bg-white border-r border-slate-200 p-6 flex flex-col max-h-screen overflow-y-auto shadow-sm">
-      <div className="mb-8">
+    <aside className="sidebar w-60 basis-60 shrink-0 bg-white border-r border-slate-200 p-4 flex flex-col max-h-screen overflow-y-auto shadow-sm fixed left-0 top-0 z-40">
+      <div className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">Bar Logic</p>
-        <h1 className="text-2xl font-black text-slate-900 mt-1">Control Panel</h1>
+        <h1 className="text-xl font-black text-slate-900 mt-1">Control Panel</h1>
       </div>
 
-      <nav className="flex-1 space-y-2">
+      <nav className="flex-1 space-y-1.5">
         {NAV_ITEMS.filter((item) => canView(item, role)).map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center px-4 py-3 rounded-xl transition text-sm font-semibold ${
+            className={`flex items-center px-3 py-2.5 rounded-lg transition text-sm font-semibold ${
               pathname === item.href
                 ? 'bg-blue-50 text-blue-700 border border-blue-100'
                 : 'text-slate-700 hover:bg-slate-100 border border-transparent'
@@ -71,12 +74,12 @@ export default function Sidebar({ role }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t border-slate-200 pt-4 mt-6">
+      <div className="border-t border-slate-200 pt-3 mt-4">
         <button
           type="button"
           onClick={() => void onSignOut()}
           disabled={isSigningOut}
-          className="w-full px-4 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-700 disabled:bg-slate-400 font-semibold transition"
+          className="w-full px-3 py-2.5 rounded-lg bg-slate-900 text-white hover:bg-slate-700 disabled:bg-slate-400 font-semibold transition"
         >
           {isSigningOut ? 'Logging out...' : 'Logout'}
         </button>
@@ -84,3 +87,4 @@ export default function Sidebar({ role }: SidebarProps) {
     </aside>
   );
 }
+

@@ -29,9 +29,9 @@ test('GET /api/sales rejects test token when only NEXT_PUBLIC_AUTH_TEST_MODE is 
   assert.equal(payload.error, 'Invalid or expired token');
 });
 
-test('GET /api/reports rejects test-manager token when only NEXT_PUBLIC_AUTH_TEST_MODE is enabled', async () => {
+test('GET /api/reports rejects test-staff token when only NEXT_PUBLIC_AUTH_TEST_MODE is enabled', async () => {
   const response = await fetch(`${BASE_URL}/api/reports?range=week`, {
-    headers: { authorization: 'Bearer test-manager' },
+    headers: { authorization: 'Bearer test-staff' },
   });
   const payload = await response.json();
 

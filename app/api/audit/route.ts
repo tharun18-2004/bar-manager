@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, serverError } from '@/lib/api-response';
 import { supabase } from '@/lib/supabase';
+import { getSupabaseAdminClient } from '@/lib/supabase-admin';
 
 function isValidYyyyMmDd(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -118,10 +119,25 @@ export async function GET(req: NextRequest) {
       return badRequest('cursor is invalid');
     }
 
-    let query = supabase.from('audit_logs').select('*');
+    const db = (() => {
+      try {
+        return getSupabaseAdminClient();
+      } catch {
+        return supabase;
+      }
+    })();
+
+    let query = db.from('audit_logs').select('*');
 
     if (actor) query = query.ilike('actor_email', `%${actor}%`);
-    if (action) query = query.eq('action', action);
+    if (action) {
+      const normalizedAction = action.toLowerCase();
+      if (normalizedAction === 'owner' || normalizedAction === 'staff' || normalizedAction === 'manager') {
+        query = query.eq('actor_role', normalizedAction);
+      } else {
+        query = query.ilike('action', `%${action}%`);
+      }
+    }
     if (dateFrom) query = query.gte('created_at', startOfDayIso(dateFrom));
     if (dateTo) query = query.lte('created_at', endOfDayIso(dateTo));
     if (decodedCursor) {

@@ -2,38 +2,62 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, User } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase';
 
-export type AppRole = 'staff' | 'manager' | 'owner';
+export type AppRole = 'staff' | 'owner';
 
 interface AuthContext {
   user: User;
   role: AppRole;
 }
 
+interface UserAccessRow {
+  role: AppRole;
+  isActive: boolean;
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const isAuthTestMode = process.env.AUTH_TEST_MODE === '1';
 
 function resolveRole(user: User): AppRole {
   const appRole = user.app_metadata?.role;
   const userRole = user.user_metadata?.role;
   const rawRole = typeof appRole === 'string' ? appRole : typeof userRole === 'string' ? userRole : 'staff';
-  return rawRole === 'owner' || rawRole === 'manager' ? rawRole : 'staff';
+  return rawRole === 'owner' ? 'owner' : 'staff';
 }
 
-async function resolveRoleFromUsersTable(userId: string): Promise<AppRole | null> {
+async function resolveUserAccessFromUsersTable(userId: string): Promise<UserAccessRow | null> {
   try {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('users')
-      .select('role')
+      .select('role, is_active')
       .eq('id', userId)
       .limit(1)
       .maybeSingle();
-    if (error || !data) return null;
+    if (error) {
+      const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+      if (!message.includes("column 'is_active' does not exist") && !message.includes('column "is_active" does not exist')) {
+        return null;
+      }
+
+      const fallback = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .limit(1)
+        .maybeSingle();
+      if (fallback.error || !fallback.data) return null;
+      const fallbackRole = typeof fallback.data.role === 'string' ? fallback.data.role.trim().toLowerCase() : '';
+      if (fallbackRole === 'owner') return { role: 'owner', isActive: true };
+      if (fallbackRole === 'staff') return { role: 'staff', isActive: true };
+      return null;
+    }
+    if (!data) return null;
     const dbRole = typeof data.role === 'string' ? data.role.trim().toLowerCase() : '';
-    if (dbRole === 'owner') return 'owner';
-    if (dbRole === 'manager') return 'manager';
-    if (dbRole === 'staff') return 'staff';
+    const isActive = data.is_active !== false;
+    if (dbRole === 'owner') return { role: 'owner', isActive };
+    if (dbRole === 'staff') return { role: 'staff', isActive };
     return null;
   } catch {
     return null;
@@ -52,7 +76,6 @@ function resolveTestRoleFromToken(token: string): AppRole | null {
   if (!isAuthTestMode) return null;
 
   if (token === 'test-owner') return 'owner';
-  if (token === 'test-manager') return 'manager';
   if (token === 'test-staff') return 'staff';
   return null;
 }
@@ -93,11 +116,12 @@ export async function requireAuth(
     return testAuthContext(testRole);
   }
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const authKey = (supabaseServiceRoleKey && supabaseServiceRoleKey.trim()) || (supabaseAnonKey && supabaseAnonKey.trim());
+  if (!supabaseUrl || !authKey) {
     return NextResponse.json({ success: false, error: 'Server auth is not configured' }, { status: 500 });
   }
 
-  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+  const authClient = createClient(supabaseUrl, authKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -107,8 +131,11 @@ export async function requireAuth(
   }
 
   const metadataRole = resolveRole(data.user);
-  const dbRole = await resolveRoleFromUsersTable(data.user.id);
-  const role = dbRole ?? metadataRole;
+  const dbAccess = await resolveUserAccessFromUsersTable(data.user.id);
+  if (dbAccess && !dbAccess.isActive) {
+    return forbidden();
+  }
+  const role = dbAccess?.role ?? metadataRole;
   if (allowedRoles && !allowedRoles.includes(role)) {
     return forbidden();
   }

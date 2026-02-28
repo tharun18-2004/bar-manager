@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { supabase } from '@/lib/supabase';
-import { badRequest, serverError } from '@/lib/api-response';
+import { serverError } from '@/lib/api-response';
 import {
   aggregateTopItemsFromOrders,
   currentDayUtcRange,
@@ -9,6 +9,11 @@ import {
   parseTimezoneOffset,
   type OrderAnalyticsRow,
 } from '@/lib/order-analytics';
+import { getLatestMonthClosureCutoffIso, maxIso } from '@/lib/month-closure';
+import { loadAnalyticsOrdersRange } from '@/lib/analytics-orders-source';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,16 +27,12 @@ export async function GET(req: NextRequest) {
       range === 'month'
         ? currentMonthUtcRange(timezoneOffsetMinutes)
         : currentDayUtcRange(timezoneOffsetMinutes);
+    const closureCutoffIso = await getLatestMonthClosureCutoffIso();
+    const effectiveStartIso = closureCutoffIso ? maxIso(bounds.startIso, closureCutoffIso) : bounds.startIso;
+    const boundedStartIso = effectiveStartIso < bounds.endIso ? effectiveStartIso : bounds.startIso;
 
-    const { data: ordersRaw, error: ordersError } = await supabase
-      .from('orders')
-      .select('total_amount, created_at, items')
-      .gte('created_at', bounds.startIso)
-      .lt('created_at', bounds.endIso)
-      .order('created_at', { ascending: false });
+    const orders = (await loadAnalyticsOrdersRange(boundedStartIso, bounds.endIso)) as OrderAnalyticsRow[];
 
-    if (ordersError) throw ordersError;
-    const orders = (ordersRaw ?? []) as OrderAnalyticsRow[];
     const totalSales = orders.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
     const totalOrders = orders.length;
     const topItems = aggregateTopItemsFromOrders(orders).slice(0, 5);
@@ -40,10 +41,15 @@ export async function GET(req: NextRequest) {
     if (auth.role === 'owner') {
       const { data: inventoryRows, error: inventoryError } = await supabase
         .from('inventory')
-        .select('quantity');
+        .select('stock_quantity, quantity, low_stock_alert');
       if (inventoryError) throw inventoryError;
       const inventory = Array.isArray(inventoryRows) ? inventoryRows : [];
-      lowStockItems = inventory.filter((row: any) => Number(row.quantity) <= 5).length;
+      lowStockItems = inventory.filter((row: any) => {
+        const stock = Number(row?.stock_quantity ?? row?.quantity ?? 0);
+        const thresholdRaw = Number(row?.low_stock_alert ?? 5);
+        const threshold = Number.isFinite(thresholdRaw) && thresholdRaw >= 0 ? Math.trunc(thresholdRaw) : 5;
+        return stock < threshold;
+      }).length;
     }
 
     return NextResponse.json({

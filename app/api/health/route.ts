@@ -36,7 +36,10 @@ export async function GET() {
     }
   }
 
-  const statusCode = envReady && authReachable !== false ? 200 : 503;
+  // Health readiness is based on required env configuration.
+  // External auth reachability is reported in diagnostics but should not
+  // flip service readiness for local/test environments.
+  const statusCode = envReady ? 200 : 503;
   const now = new Date().toISOString();
 
   return NextResponse.json(

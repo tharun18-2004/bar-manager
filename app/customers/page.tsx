@@ -22,7 +22,7 @@ interface Customer {
 }
 
 export default function CustomersPage() {
-  const { isChecking, isAuthorized, role } = useRouteGuard(['manager', 'owner']);
+  const { isChecking, isAuthorized, role } = useRouteGuard(['owner']);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -119,11 +119,11 @@ export default function CustomersPage() {
   const avgSpent = totalCustomers > 0 ? totalRevenue / totalCustomers : 0;
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white">
+    <div className="layout flex h-screen bg-slate-950 text-white">
       <Sidebar role={role} />
       {toast && <AppToast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}
 
-      <div className="flex-1 flex flex-col">
+      <div className="main-content flex flex-col">
         <PageHeader title="CUSTOMER MANAGEMENT" role={role} />
 
         <div className="flex-1 p-6 overflow-y-auto">
@@ -268,3 +268,6 @@ export default function CustomersPage() {
     </div>
   );
 }
+
+
+

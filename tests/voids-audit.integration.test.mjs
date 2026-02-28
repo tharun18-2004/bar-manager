@@ -119,7 +119,7 @@ test('POST /api/voids writes audit event on success', async () => {
   const response = await fetch(`${BASE_URL}/api/voids`, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
       'x-request-id': 'req-void-1',
     },
@@ -146,7 +146,7 @@ test('POST /api/voids validation failure does not write audit event', async () =
   const response = await fetch(`${BASE_URL}/api/voids`, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({

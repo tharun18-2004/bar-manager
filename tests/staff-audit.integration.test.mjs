@@ -12,17 +12,17 @@ let mockServerPort;
 
 const mockState = {
   auditInserts: [],
-  staffRows: [
-    { id: 1, name: 'Alex', email: 'alex@example.test', role: 'manager' },
-    { id: 2, name: 'Casey', email: 'casey@example.test', role: 'bartender' },
+  userRows: [
+    { id: '11111111-1111-4111-8111-111111111111', name: 'Alex', email: 'alex@example.test', role: 'staff', is_active: true },
+    { id: '22222222-2222-4222-8222-222222222222', name: 'Casey', email: 'casey@example.test', role: 'staff', is_active: true },
   ],
 };
 
 function resetMockState() {
   mockState.auditInserts = [];
-  mockState.staffRows = [
-    { id: 1, name: 'Alex', email: 'alex@example.test', role: 'manager' },
-    { id: 2, name: 'Casey', email: 'casey@example.test', role: 'bartender' },
+  mockState.userRows = [
+    { id: '11111111-1111-4111-8111-111111111111', name: 'Alex', email: 'alex@example.test', role: 'staff', is_active: true },
+    { id: '22222222-2222-4222-8222-222222222222', name: 'Casey', email: 'casey@example.test', role: 'staff', is_active: true },
   ];
 }
 
@@ -44,8 +44,7 @@ function parseEqId(searchParams) {
   const raw = searchParams.get('id');
   if (!raw) return null;
   if (!raw.startsWith('eq.')) return null;
-  const parsed = Number(raw.slice(3));
-  return Number.isInteger(parsed) ? parsed : null;
+  return raw.slice(3);
 }
 
 function startMockSupabaseServer() {
@@ -61,34 +60,39 @@ function startMockSupabaseServer() {
         return;
       }
 
-      if (reqUrl.pathname === '/rest/v1/staff' && req.method === 'GET') {
+      if (reqUrl.pathname === '/rest/v1/users' && req.method === 'GET') {
         const id = parseEqId(reqUrl.searchParams);
-        const rows = id ? mockState.staffRows.filter((row) => row.id === id) : mockState.staffRows;
+        const rows = id ? mockState.userRows.filter((row) => row.id === id) : mockState.userRows;
         json(res, 200, rows);
         return;
       }
 
-      if (reqUrl.pathname === '/rest/v1/staff' && req.method === 'PATCH') {
+      if (reqUrl.pathname === '/rest/v1/users' && req.method === 'PATCH') {
         const id = parseEqId(reqUrl.searchParams);
         const body = await readJson(req);
-        const rowIndex = mockState.staffRows.findIndex((row) => row.id === id);
+        const rowIndex = mockState.userRows.findIndex((row) => row.id === id);
         if (rowIndex === -1) {
           json(res, 200, []);
           return;
         }
 
-        mockState.staffRows[rowIndex] = { ...mockState.staffRows[rowIndex], ...body };
-        json(res, 200, [mockState.staffRows[rowIndex]]);
+        mockState.userRows[rowIndex] = { ...mockState.userRows[rowIndex], ...body };
+        json(res, 200, [mockState.userRows[rowIndex]]);
         return;
       }
 
-      if (reqUrl.pathname === '/rest/v1/staff' && req.method === 'DELETE') {
+      if (reqUrl.pathname === '/rest/v1/users' && req.method === 'DELETE') {
         const id = parseEqId(reqUrl.searchParams);
-        const rowIndex = mockState.staffRows.findIndex((row) => row.id === id);
+        const rowIndex = mockState.userRows.findIndex((row) => row.id === id);
         if (rowIndex !== -1) {
-          mockState.staffRows.splice(rowIndex, 1);
+          mockState.userRows.splice(rowIndex, 1);
         }
         json(res, 200, []);
+        return;
+      }
+
+      if (reqUrl.pathname.startsWith('/auth/v1/admin/users/') && req.method === 'DELETE') {
+        json(res, 200, { user: null });
         return;
       }
 
@@ -111,6 +115,7 @@ test.before(async () => {
     AUDIT_LOG_TO_DB: '1',
     NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${mockServerPort}`,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
   });
 });
 
@@ -134,8 +139,9 @@ test('PUT /api/staff writes staff.update audit event on success', async () => {
       'x-request-id': 'req-staff-put-1',
     },
     body: JSON.stringify({
-      id: 1,
-      role: 'waiter',
+      id: '11111111-1111-4111-8111-111111111111',
+      role: 'staff',
+      name: 'Alex Updated',
     }),
   });
   const payload = await response.json();
@@ -147,17 +153,16 @@ test('PUT /api/staff writes staff.update audit event on success', async () => {
   const event = mockState.auditInserts[0];
   assert.equal(event.request_id, 'req-staff-put-1');
   assert.equal(event.action, 'staff.update');
-  assert.equal(event.resource, 'staff');
-  assert.equal(event.resource_id, '1');
+  assert.equal(event.resource, 'users');
+  assert.equal(event.resource_id, '11111111-1111-4111-8111-111111111111');
   assert.equal(event.actor_role, 'owner');
   assert.equal(event.outcome, 'success');
-  assert.equal(event.before_state.role, 'manager');
-  assert.equal(event.after_state.role, 'waiter');
-  assert.deepEqual(event.metadata.updatedFields, ['role']);
+  assert.equal(event.before_state.role, 'staff');
+  assert.deepEqual(event.metadata.updatedFields, ['name', 'role']);
 });
 
-test('DELETE /api/staff writes staff.delete audit event on success', async () => {
-  const response = await fetch(`${BASE_URL}/api/staff?id=2`, {
+test('DELETE /api/staff writes staff.deactivate audit event on success', async () => {
+  const response = await fetch(`${BASE_URL}/api/staff?id=22222222-2222-4222-8222-222222222222`, {
     method: 'DELETE',
     headers: {
       authorization: 'Bearer test-owner',
@@ -172,12 +177,12 @@ test('DELETE /api/staff writes staff.delete audit event on success', async () =>
 
   const event = mockState.auditInserts[0];
   assert.equal(event.request_id, 'req-staff-del-1');
-  assert.equal(event.action, 'staff.delete');
-  assert.equal(event.resource, 'staff');
-  assert.equal(event.resource_id, '2');
+  assert.equal(event.action, 'staff.deactivate');
+  assert.equal(event.resource, 'users');
+  assert.equal(event.resource_id, '22222222-2222-4222-8222-222222222222');
   assert.equal(event.outcome, 'success');
   assert.equal(event.before_state.email, 'casey@example.test');
-  assert.equal(event.after_state, null);
+  assert.equal(event.after_state.is_active, false);
 });
 
 test('PUT /api/staff validation failure does not write audit event', async () => {
@@ -189,14 +194,14 @@ test('PUT /api/staff validation failure does not write audit event', async () =>
       'x-request-id': 'req-staff-put-invalid',
     },
     body: JSON.stringify({
-      id: 0,
-      role: 'waiter',
+      id: 'bad-id',
+      role: 'staff',
     }),
   });
   const payload = await response.json();
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'id must be a positive integer');
+  assert.equal(payload.error, 'id must be a valid UUID');
   assert.equal(mockState.auditInserts.length, 0);
 });

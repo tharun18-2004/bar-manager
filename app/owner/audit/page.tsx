@@ -112,10 +112,10 @@ export default function OwnerAuditPage() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white">
+    <div className="layout flex h-screen bg-slate-950 text-white">
       <Sidebar role={role} />
 
-      <div className="flex-1 flex flex-col">
+      <div className="main-content flex flex-col">
         <PageHeader title="OWNER AUDIT LOG" role={role} />
 
         <div className="bg-slate-900 border-b border-slate-800 flex gap-6 px-6">
@@ -151,7 +151,7 @@ export default function OwnerAuditPage() {
                   setAuditAction(e.target.value);
                   resetAuditPagination();
                 }}
-                placeholder="Action (e.g. staff.update)"
+                placeholder="Action or role (e.g. inventory.update / owner)"
                 className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm"
               />
               <input
@@ -225,3 +225,5 @@ export default function OwnerAuditPage() {
     </div>
   );
 }
+
+

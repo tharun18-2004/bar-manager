@@ -6,10 +6,10 @@ import { supabase } from '@/lib/auth';
 import type { AppRole } from '@/lib/api-auth';
 
 function resolveRole(sessionRole?: unknown, userRole?: unknown): AppRole {
-  if (sessionRole === 'owner' || sessionRole === 'manager' || sessionRole === 'staff') {
+  if (sessionRole === 'owner' || sessionRole === 'staff') {
     return sessionRole;
   }
-  if (userRole === 'owner' || userRole === 'manager' || userRole === 'staff') {
+  if (userRole === 'owner' || userRole === 'staff') {
     return userRole;
   }
   return 'staff';
@@ -52,10 +52,20 @@ export function useRouteGuard(
             'x-request-id': crypto.randomUUID(),
           },
         });
+        if (authContextRes.status === 403) {
+          await supabase.auth.signOut();
+          if (mounted) {
+            setRole(null);
+            setIsAuthorized(false);
+            setIsChecking(false);
+          }
+          router.replace(`/auth?next=${encodeURIComponent(pathname || '/')}`);
+          return;
+        }
         if (authContextRes.ok) {
           const payload = await authContextRes.json();
           const roleFromApi = payload?.data?.role;
-          if (roleFromApi === 'owner' || roleFromApi === 'manager' || roleFromApi === 'staff') {
+          if (roleFromApi === 'owner' || roleFromApi === 'staff') {
             resolvedRole = roleFromApi;
           }
         }

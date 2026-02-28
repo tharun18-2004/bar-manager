@@ -96,6 +96,7 @@ Required environment variables in `.env.local`:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 # Gemini AI (server-side only)
 GEMINI_API_KEY=your-gemini-key
@@ -224,7 +225,6 @@ Note: Change these in production!
 
 Role-based access is enforced in API routes and pages. Supported roles:
 - `staff`
-- `manager`
 - `owner`
 
 Set roles in Supabase user metadata/app metadata (for example `app_metadata.role = "owner"`).
@@ -236,12 +236,12 @@ All API requests require a valid Supabase bearer token in the `Authorization` he
 |------|------|------|-------------|
 | Home | `/` | Public | Login page |
 | Auth | `/auth` | Public | Sign up/Sign in |
-| POS | `/employee` | Staff/Manager/Owner | Point of sale system |
-| Inventory | `/inventory` | Manager/Owner | Stock management |
+| POS | `/employee` | Staff/Owner | Point of sale system |
+| Inventory | `/inventory` | Owner | Stock management |
 | Staff | `/staff` | Owner | Employee management |
-| Customers | `/customers` | Manager/Owner | Customer tracking |
-| Tables | `/tables` | Staff/Manager/Owner | Table management |
-| Reports | `/reports` | Manager/Owner | Analytics & insights |
+| Customers | `/customers` | Owner | Customer tracking |
+| Tables | `/tables` | Staff/Owner | Table management |
+| Reports | `/reports` | Owner | Analytics & insights |
 | Owner | `/owner` | Owner | Dashboard & audit logs |
 
 ## 🛠️ Development
@@ -307,43 +307,43 @@ railway up
 ## 📚 API Documentation
 
 ### Sales API
-- `POST /api/sales` - Record a sale (`staff/manager/owner`)
-- `GET /api/sales` - Fetch sales records (`staff/manager/owner`)
-- `GET /api/sales?staff=name` - Filter by staff (`staff/manager/owner`)
-- `GET /api/sales?voided=true` - Get voided sales (`staff/manager/owner`)
+- `POST /api/sales` - Record a sale (`staff/owner`)
+- `GET /api/sales` - Fetch sales records (`staff/owner`)
+- `GET /api/sales?staff=name` - Filter by staff (`staff/owner`)
+- `GET /api/sales?voided=true` - Get voided sales (`staff/owner`)
 
 
 ### Orders API
-- `POST /api/orders` - Complete order and record `payment_method` (`staff/manager/owner`)
+- `POST /api/orders` - Complete order and record `payment_method` (`staff/owner`)
 
 ### Inventory API
-- `GET /api/inventory` - Get all items (`staff/manager/owner`)
-- `POST /api/inventory` - Add item (`manager/owner`)
-- `PUT /api/inventory` - Update quantity (`manager/owner`)
+- `GET /api/inventory` - Get all items (`staff/owner`)
+- `POST /api/inventory` - Add item (`owner`)
+- `PUT /api/inventory` - Update quantity (`owner`)
 
 ### Staff API
-- `GET /api/staff` - List all staff (`manager/owner`)
-- `POST /api/staff` - Add staff member (`owner`)
-- `PUT /api/staff` - Update staff (`owner`)
-- `DELETE /api/staff?id=xxx` - Remove staff (`owner`)
+- `GET /api/staff` - List staff accounts from `users` (`owner`)
+- `POST /api/staff` - Create Supabase Auth user + `users` row (`owner`)
+- `PUT /api/staff` - Update staff account profile fields (`owner`)
+- `DELETE /api/staff?id=<uuid>` - Remove staff account from Auth + `users` (`owner`)
 
 ### Customers API
-- `GET /api/customers` - List customers (`manager/owner`)
-- `POST /api/customers` - Add customer (`manager/owner`)
-- `PUT /api/customers` - Update customer info (`manager/owner`)
-- `DELETE /api/customers?id=xxx` - Remove customer (`manager/owner`)
+- `GET /api/customers` - List customers (`owner`)
+- `POST /api/customers` - Add customer (`owner`)
+- `PUT /api/customers` - Update customer info (`owner`)
+- `DELETE /api/customers?id=xxx` - Remove customer (`owner`)
 
 ### Tables API
-- `GET /api/tables` - List all tables (`staff/manager/owner`)
-- `POST /api/tables` - Create table (`manager/owner`)
-- `PUT /api/tables` - Update table status (`staff/manager/owner`)
+- `GET /api/tables` - List all tables (`staff/owner`)
+- `POST /api/tables` - Create table (`owner`)
+- `PUT /api/tables` - Update table status (`staff/owner`)
 
 ### Voids API
-- `POST /api/voids` - Void a transaction (`staff/manager/owner`)
-- `GET /api/voids` - Fetch void logs (`manager/owner`)
+- `POST /api/voids` - Void a transaction (`staff/owner`)
+- `GET /api/voids` - Fetch void logs (`owner`)
 
 ### Reports API
-- `GET /api/reports?range=today|week|month` - Sales report + AI insights (`manager/owner`)
+- `GET /api/reports?range=today|week|month` - Sales report + AI insights (`owner`)
 
 ### Audit API
 - `GET /api/audit` - Owner audit stream (`owner`)
@@ -387,6 +387,7 @@ For issues and questions, please contact the development team.
 **Version**: 2.0.0  
 **Last Updated**: February 19, 2026  
 **Status**: Production Ready ✅
+
 
 
 

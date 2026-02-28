@@ -98,17 +98,18 @@ test('GET /api/reports returns 403 for staff role token', async () => {
   assert.equal(payload.error, 'Forbidden');
 });
 
-test('POST /api/staff returns 403 for manager role token', async () => {
+test('POST /api/staff returns 403 for staff role token', async () => {
   const response = await fetch(`${BASE_URL}/api/staff`, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
       name: 'Casey',
       email: 'casey@example.test',
-      role: 'bartender',
+      password: 'secret123',
+      role: 'staff',
     }),
   });
   const payload = await response.json();
@@ -118,11 +119,11 @@ test('POST /api/staff returns 403 for manager role token', async () => {
   assert.equal(payload.error, 'Forbidden');
 });
 
-test('POST /api/inventory with manager token returns 403', async () => {
+test('POST /api/inventory with staff token returns 403', async () => {
   const response = await fetch(`${BASE_URL}/api/inventory`, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
@@ -148,6 +149,7 @@ test('POST /api/staff with owner token reaches request validation', async () => 
     body: JSON.stringify({
       name: 'Casey',
       email: 'casey@example.test',
+      password: 'secret123',
       role: 'invalid-role',
     }),
   });
@@ -155,12 +157,32 @@ test('POST /api/staff with owner token reaches request validation', async () => 
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'role must be one of: bartender, waiter, manager');
+  assert.equal(payload.error, 'role must be staff');
 });
 
-test('GET /api/reports returns 403 for manager role token', async () => {
+test('POST /api/staff with owner token validates required password', async () => {
+  const response = await fetch(`${BASE_URL}/api/staff`, {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer test-owner',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: 'Taylor',
+      email: 'taylor@example.test',
+      role: 'staff',
+    }),
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'password must be at least 6 characters');
+});
+
+test('GET /api/reports returns 403 for staff role token', async () => {
   const response = await fetch(`${BASE_URL}/api/reports?range=week`, {
-    headers: { authorization: 'Bearer test-manager' },
+    headers: { authorization: 'Bearer test-staff' },
   });
   const payload = await response.json();
 
@@ -214,13 +236,13 @@ test('POST /api/sales with staff token reaches request validation', async () => 
       authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ amount: 120 }),
+    body: JSON.stringify({ quantity: 1 }),
   });
   const payload = await response.json();
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'item_name is required');
+  assert.equal(payload.error, 'inventory_id is required');
 });
 
 test('GET /api/voids returns 403 for staff role token', async () => {
@@ -234,11 +256,11 @@ test('GET /api/voids returns 403 for staff role token', async () => {
   assert.equal(payload.error, 'Forbidden');
 });
 
-test('POST /api/voids with manager token reaches request validation', async () => {
+test('POST /api/voids with staff token reaches request validation', async () => {
   const response = await fetch(`${BASE_URL}/api/voids`, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
@@ -253,16 +275,16 @@ test('POST /api/voids with manager token reaches request validation', async () =
   assert.equal(payload.error, 'sale_id must be a positive integer');
 });
 
-test('PUT /api/staff with manager token returns 403', async () => {
+test('PUT /api/staff with staff token returns 403', async () => {
   const response = await fetch(`${BASE_URL}/api/staff`, {
     method: 'PUT',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      id: 1,
-      role: 'waiter',
+      id: '11111111-1111-1111-1111-111111111111',
+      role: 'staff',
     }),
   });
   const payload = await response.json();
@@ -272,7 +294,7 @@ test('PUT /api/staff with manager token returns 403', async () => {
   assert.equal(payload.error, 'Forbidden');
 });
 
-test('DELETE /api/staff with owner token reaches request validation', async () => {
+test('DELETE /api/staff with owner token validates UUID', async () => {
   const response = await fetch(`${BASE_URL}/api/staff?id=abc`, {
     method: 'DELETE',
     headers: { authorization: 'Bearer test-owner' },
@@ -281,19 +303,19 @@ test('DELETE /api/staff with owner token reaches request validation', async () =
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'id must be a positive integer');
+  assert.equal(payload.error, 'id must be a valid UUID');
 });
 
-test('DELETE /api/customers with manager token reaches request validation', async () => {
+test('DELETE /api/customers with staff token is forbidden', async () => {
   const response = await fetch(`${BASE_URL}/api/customers?id=abc`, {
     method: 'DELETE',
-    headers: { authorization: 'Bearer test-manager' },
+    headers: { authorization: 'Bearer test-staff' },
   });
   const payload = await response.json();
 
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 403);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'Customer ID must be a positive integer');
+  assert.equal(payload.error, 'Forbidden');
 });
 
 test('PUT /api/tables with staff token reaches request validation', async () => {
@@ -312,7 +334,7 @@ test('PUT /api/tables with staff token reaches request validation', async () => 
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'status must be one of: available, occupied, needs_cleaning');
+  assert.equal(payload.error, 'status must be one of: available, occupied, cleaning');
 });
 
 test('GET /api/sales returns 401 for unknown bearer token', async () => {
@@ -334,22 +356,22 @@ test('PUT /api/staff with owner token validates id before DB', async () => {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      id: 0,
-      role: 'waiter',
+      id: 'invalid-uuid',
+      role: 'staff',
     }),
   });
   const payload = await response.json();
 
   assert.equal(response.status, 400);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'id must be a positive integer');
+  assert.equal(payload.error, 'id must be a valid UUID');
 });
 
-test('PUT /api/customers with manager token validates id before DB', async () => {
+test('PUT /api/customers with staff token is forbidden', async () => {
   const response = await fetch(`${BASE_URL}/api/customers`, {
     method: 'PUT',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
@@ -359,16 +381,16 @@ test('PUT /api/customers with manager token validates id before DB', async () =>
   });
   const payload = await response.json();
 
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 403);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'id must be a positive integer');
+  assert.equal(payload.error, 'Forbidden');
 });
 
-test('POST /api/customers with manager token validates required fields', async () => {
+test('POST /api/customers with staff token is forbidden', async () => {
   const response = await fetch(`${BASE_URL}/api/customers`, {
     method: 'POST',
     headers: {
-      authorization: 'Bearer test-manager',
+      authorization: 'Bearer test-staff',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
@@ -378,14 +400,14 @@ test('POST /api/customers with manager token validates required fields', async (
   });
   const payload = await response.json();
 
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 403);
   assert.equal(payload.success, false);
-  assert.equal(payload.error, 'phone is required');
+  assert.equal(payload.error, 'Forbidden');
 });
 
-test('GET /api/audit returns 403 for manager role token', async () => {
+test('GET /api/audit returns 403 for staff role token', async () => {
   const response = await fetch(`${BASE_URL}/api/audit`, {
-    headers: { authorization: 'Bearer test-manager' },
+    headers: { authorization: 'Bearer test-staff' },
   });
   const payload = await response.json();
 
