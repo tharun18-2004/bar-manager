@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import StatCard from '@/components/StatCard';
@@ -42,6 +42,22 @@ type InventoryFormState = {
 
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 const CATEGORY_OPTIONS = ['Beer', 'Hard Drinks', 'Soft Drinks', 'Food'];
+const CATEGORY_ALIAS: Record<string, string> = {
+  beer: 'Beer',
+  'hard drinks': 'Hard Drinks',
+  whisky: 'Hard Drinks',
+  whiskey: 'Hard Drinks',
+  rum: 'Hard Drinks',
+  vodka: 'Hard Drinks',
+  brandy: 'Hard Drinks',
+  gin: 'Hard Drinks',
+  tequila: 'Hard Drinks',
+  'soft drinks': 'Soft Drinks',
+  softdrink: 'Soft Drinks',
+  juice: 'Soft Drinks',
+  water: 'Soft Drinks',
+  food: 'Food',
+};
 const VOLUME_OPTIONS_ML = [250, 300, 330, 500, 650, 750, 1000] as const;
 const FOOD_PORTION_OPTIONS: Array<{ value: 'PLATE' | 'FULL' | 'HALF'; label: string; bottle_size_ml: number }> = [
   { value: 'PLATE', label: 'Plate', bottle_size_ml: 3 },
@@ -109,6 +125,13 @@ function isFoodCategory(value: string) {
   return value.trim().toLowerCase() === 'food';
 }
 
+function normalizeCategoryName(value: string) {
+  const raw = value.trim().replace(/\s+/g, ' ');
+  if (!raw) return raw;
+  const alias = CATEGORY_ALIAS[raw.toLowerCase()];
+  return alias ?? raw;
+}
+
 function portionToBottleSizeMl(portionType: 'PLATE' | 'FULL' | 'HALF') {
   const matched = FOOD_PORTION_OPTIONS.find((option) => option.value === portionType);
   return matched?.bottle_size_ml ?? 3;
@@ -126,7 +149,7 @@ function foodPortionLabelFromBottleSizeMl(value: unknown) {
   return matched?.label ?? 'Plate';
 }
 
-export default function InventoryPage() {
+function InventoryPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -887,6 +910,16 @@ export default function InventoryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense
+      fallback={<div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">Loading...</div>}
+    >
+      <InventoryPageContent />
+    </Suspense>
   );
 }
 

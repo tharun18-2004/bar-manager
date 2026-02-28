@@ -109,23 +109,30 @@ export async function GET(req: NextRequest) {
     const auth = await requireAuth(req, ['owner']);
     if (auth instanceof NextResponse) return auth;
 
-    let result = await supabase
+    const resultWithIsActive = await supabase
       .from('users')
       .select('id, name, email, role, is_active, created_at')
       .eq('role', 'staff')
       .order('created_at', { ascending: false });
 
-    if (result.error && isUsersMissingColumnError(result.error, 'is_active')) {
-      result = await supabase
+    if (resultWithIsActive.error && isUsersMissingColumnError(resultWithIsActive.error, 'is_active')) {
+      const fallbackResult = await supabase
         .from('users')
         .select('id, name, email, role, created_at')
         .eq('role', 'staff')
         .order('created_at', { ascending: false });
+
+      if (fallbackResult.error) throw fallbackResult.error;
+
+      const rows = (Array.isArray(fallbackResult.data) ? fallbackResult.data : []).map((row) =>
+        normalizeUserRow(row as Record<string, unknown>)
+      );
+      return NextResponse.json({ success: true, data: rows });
     }
 
-    if (result.error) throw result.error;
+    if (resultWithIsActive.error) throw resultWithIsActive.error;
 
-    const rows = (Array.isArray(result.data) ? result.data : []).map((row) =>
+    const rows = (Array.isArray(resultWithIsActive.data) ? resultWithIsActive.data : []).map((row) =>
       normalizeUserRow(row as Record<string, unknown>)
     );
     return NextResponse.json({ success: true, data: rows });

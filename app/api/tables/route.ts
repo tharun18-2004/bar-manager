@@ -11,7 +11,8 @@ function toStorageStatus(status: string) {
 }
 
 function toApiStatus(status: unknown) {
-  return status === 'needs_cleaning' ? 'cleaning' : status;
+  if (status === 'needs_cleaning') return 'cleaning';
+  return typeof status === 'string' ? status : '';
 }
 
 export async function GET(req: NextRequest) {
@@ -123,7 +124,7 @@ export async function PUT(req: NextRequest) {
 
     const storageStatus = toStorageStatus(normalizedApiStatus);
     const updateData: Record<string, unknown> = { status: storageStatus };
-    if (storageStatus === 'available' || storageStatus === 'needs_cleaning') {
+    if (storageStatus === 'available' || storageStatus === 'cleaning') {
       updateData.customer_name = null;
       updateData.order_amount = null;
       updateData.order_reference = null;
