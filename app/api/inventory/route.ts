@@ -1,7 +1,5 @@
-L:L::L:L:L:L:L:L:L:L:::L:L:L:L:+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_
-
 import { NextRequest, NextResponse } from 'next/server';
-][\i\]mport { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { badRequest, serverError } from '@/lib/api-response';
 import { writeAuditEvent } from '@/lib/audit-log';
@@ -52,7 +50,7 @@ function lowStockAlertColumnMissingResponse() {
       error:
         "Database column inventory.low_stock_alert is missing. Run db/migrations/2026-02-27_add_low_stock_alert_to_inventory.sql.",
     },
-    { ]\status: 500 }
+    { status: 500 }
   );
 }
 
@@ -68,9 +66,9 @@ function purchasePriceColumnMissingResponse() {
 }
 
 function normalizeItemName(value: string) {
-  return value.trim().replace(/\s+/]]g, ' ');
+  return value.trim().replace(/\s+/g, ' ');
 }
-]
+
 function normalizeCategoryName(value: string) {
   const raw = value.trim().replace(/\s+/g, ' ');
   if (!raw) return raw;
