@@ -47,7 +47,7 @@ export default function AuditLogs() {
                 <td className="p-4 font-bold">{log.staff_name}</td>
                 <td className="p-4">{log.item_name}</td>
                 <td className="p-4 text-red-400">-${log.amount}</td>
-                <td className="p-4 italic text-zinc-400 text-sm">"{log.void_reason}"</td>
+                <td className="p-4 italic text-zinc-400 text-sm">&quot;{log.void_reason}&quot;</td>
               </tr>
             ))}
           </tbody>
